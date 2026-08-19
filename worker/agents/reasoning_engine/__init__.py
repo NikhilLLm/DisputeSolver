@@ -1,14 +1,11 @@
 """
-Reasoning Engine Sub-Package.
+Reasoning Engine Sub-Package — Lean Hybrid 4-Stage Architecture.
 
-Modular pipeline stages for dispute reasoning:
-- common: Constants, enums, LLM utilities, and evidence source tiers
-- findings_generator: Finding generation from graph context
-- deterministic_evaluator: Deterministic checks (dates, amounts, windows)
-- semantic_evaluator: LLM semantic evaluation & policy checks
-- conflict_engine: Evidence contradiction & resolution with tier hierarchy
-- weighing_engine: Symmetric fair-weighing model
-- decision_synthesizer: Final decision synthesis with executive summary & audit trace
+Stages:
+  1. graph_retrieval: Bounded 2-query graph context retrieval
+  2. case_analyst: Single LLM call producing typed `CaseAnalysis` Pydantic model
+  3. deterministic_evaluator: Generic math verification & objective deterministic weighting
+  4. decision_synthesizer: Compact `VerdictPackage` Pydantic model & explainable narrative
 """
 
 from __future__ import annotations
@@ -25,40 +22,37 @@ from worker.agents.reasoning_engine.common import (
     _llm_json_call,
     get_source_tier,
 )
-from worker.agents.reasoning_engine.conflict_engine import detect_conflicts
-from worker.agents.reasoning_engine.decision_synthesizer import (
-    _build_reasoning_trace,
-    _confidence_band,
-    _generate_explanation,
-    synthesize_decision,
+from worker.agents.reasoning_engine.case_analyst import (
+    AmountClaim,
+    CaseAnalysis,
+    ConflictPoint,
+    DateClaim,
+    EvidencePoint,
+    PolicyEvaluation,
+    analyze_case,
+    save_analysis,
 )
 from worker.agents.reasoning_engine.deterministic_evaluator import (
-    _check_credit_not_processed,
-    _check_duplicate,
-    _check_item_not_received,
-    _check_processing_error,
-    _check_subscription,
-    _check_unauthorized,
-    _extract_delivery_address,
-    _extract_delivery_date,
-    _extract_report_date,
-    _extract_shipping_address,
-    _parse_date,
-    run_deterministic_checks,
+    AmountVerificationResult,
+    DateVerificationResult,
+    DeterministicEvaluationResult,
+    WeightedEvidencePoint,
+    compute_deterministic_weights,
+    parse_flexible_date,
+    run_deterministic_evaluations,
+    verify_amount_match,
+    verify_date_gap,
 )
-from worker.agents.reasoning_engine.findings_generator import (
-    _fact_to_statement,
-    generate_findings,
+from worker.agents.reasoning_engine.decision_synthesizer import (
+    DeterministicMetrics,
+    ReasoningStatement,
+    VerdictPackage,
+    _confidence_band,
+    synthesize_verdict,
 )
-from worker.agents.reasoning_engine.semantic_evaluator import (
-    _build_case_summary,
-    _llm_evaluate_evidence_batch,
-    _llm_evaluate_policies,
-    run_semantic_evaluations,
-)
-from worker.agents.reasoning_engine.weighing_engine import fair_weighing
 
 __all__ = [
+    # Common Enums & Tiers
     "RELEVANCE_LEVELS",
     "EFFECT_TYPES",
     "OUTCOMES",
@@ -69,28 +63,29 @@ __all__ = [
     "_EFFECT_DIRECTION",
     "_get_llm_client",
     "_llm_json_call",
-    "generate_findings",
-    "_fact_to_statement",
-    "run_deterministic_checks",
-    "_parse_date",
-    "_extract_delivery_date",
-    "_extract_report_date",
-    "_extract_shipping_address",
-    "_extract_delivery_address",
-    "_check_item_not_received",
-    "_check_unauthorized",
-    "_check_duplicate",
-    "_check_credit_not_processed",
-    "_check_subscription",
-    "_check_processing_error",
-    "run_semantic_evaluations",
-    "_build_case_summary",
-    "_llm_evaluate_evidence_batch",
-    "_llm_evaluate_policies",
-    "detect_conflicts",
-    "fair_weighing",
-    "synthesize_decision",
+    # Stage 2: Case Analyst
+    "EvidencePoint",
+    "DateClaim",
+    "AmountClaim",
+    "PolicyEvaluation",
+    "ConflictPoint",
+    "CaseAnalysis",
+    "analyze_case",
+    "save_analysis",
+    # Stage 3: Deterministic Evaluator
+    "DateVerificationResult",
+    "AmountVerificationResult",
+    "WeightedEvidencePoint",
+    "DeterministicEvaluationResult",
+    "parse_flexible_date",
+    "verify_date_gap",
+    "verify_amount_match",
+    "compute_deterministic_weights",
+    "run_deterministic_evaluations",
+    # Stage 4: Decision Synthesizer
+    "ReasoningStatement",
+    "DeterministicMetrics",
+    "VerdictPackage",
     "_confidence_band",
-    "_generate_explanation",
-    "_build_reasoning_trace",
+    "synthesize_verdict",
 ]

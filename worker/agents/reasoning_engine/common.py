@@ -102,17 +102,31 @@ def _llm_json_call(
     client: OpenAI,
     system_prompt: str,
     user_prompt: str,
-    model: str = "llama-3.3-70b-versatile",
+    model: Optional[str] = None,
+    max_retries: int = 3,
 ) -> Dict[str, Any]:
-    """Make an LLM call expecting JSON output."""
-    response = client.chat.completions.create(
-        model=model,
-        temperature=0.0,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-    )
-    raw = response.choices[0].message.content or "{}"
-    return json.loads(raw)
+    """Make an LLM call expecting JSON output using openai/gpt-oss-120b."""
+    chosen_model = model or os.getenv("GROQ_TEXT_MODEL", "openai/gpt-oss-120b")
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = client.chat.completions.create(
+                model=chosen_model,
+                temperature=0.0,
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+            raw = response.choices[0].message.content or "{}"
+            return json.loads(raw)
+        except Exception as e:
+            if attempt == max_retries:
+                raise e
+            import time
+            wait_sec = attempt * 2
+            print(f"  [LLM RETRY] Attempt {attempt} failed ({e}), retrying in {wait_sec}s...")
+            time.sleep(wait_sec)
+
+    return {}

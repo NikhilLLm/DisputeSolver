@@ -1,8 +1,12 @@
 """
-Deterministic Evaluator Module.
+Deterministic Evaluator Module — Generic Math Verification & Deterministic Weighing.
 
-Runs objective, deterministic Python checks (dates, amounts, windows, addresses)
-without calling an LLM.
+Consumes the typed `CaseAnalysis` from Stage 2:
+  1. Runs generic mathematical verifications (date gaps, amount checks, policy windows)
+     without category-specific branching.
+  2. Computes deterministic evidence weights using the fixed 5-level relevance
+     and 3-level tier weight formulas (NO LLM hallucination in numeric scores).
+  3. Calculates final objective support scores, normalized percentages, and net direction.
 """
 
 from __future__ import annotations
@@ -10,338 +14,322 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, Field
+
+from worker.agents.reasoning_engine.case_analyst import CaseAnalysis, DateClaim, AmountClaim, EvidencePoint
+from worker.agents.reasoning_engine.common import (
+    EVIDENCE_SOURCE_TIERS,
+    _RELEVANCE_WEIGHT,
+    _EFFECT_DIRECTION,
+)
 
 
-def run_deterministic_checks(
-    context: Dict[str, Any],
-    config: Dict[str, Any],
-    findings: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    """Run objective, deterministic checks using Python logic.
+# ==========================================================
+# PYDANTIC MODELS FOR VERIFICATION RESULTS
+# ==========================================================
 
-    Returns a list of evaluation dicts with:
-      - eval_id, check_id, description
-      - result (PASS / FAIL / INCONCLUSIVE)
-      - detail (explanation)
-      - source_findings (which findings were used)
-      - effect (on which party)
-    """
-    evaluations: List[Dict[str, Any]] = []
-    eval_counter = 0
-
-    def _next_eid() -> str:
-        nonlocal eval_counter
-        eval_counter += 1
-        return f"DE{eval_counter:03d}"
-
-    canonical_reason = config.get("canonical_reason", "")
-
-    if canonical_reason == "ITEM_NOT_RECEIVED":
-        evaluations.extend(_check_item_not_received(context, findings, _next_eid))
-    elif canonical_reason == "UNAUTHORIZED_TRANSACTION":
-        evaluations.extend(_check_unauthorized(context, findings, _next_eid))
-    elif canonical_reason == "DUPLICATE_PROCESSING":
-        evaluations.extend(_check_duplicate(context, findings, _next_eid))
-    elif canonical_reason == "CREDIT_NOT_PROCESSED":
-        evaluations.extend(_check_credit_not_processed(context, findings, _next_eid))
-    elif canonical_reason == "SUBSCRIPTION_CANCELED":
-        evaluations.extend(_check_subscription(context, findings, _next_eid))
-    elif canonical_reason == "PROCESSING_ERROR":
-        evaluations.extend(_check_processing_error(context, findings, _next_eid))
-
-    return evaluations
+class DateVerificationResult(BaseModel):
+    """Result of a date gap / window calculation."""
+    claim_id: str
+    description: str
+    date_a: str
+    date_b: str
+    gap_days: int
+    expected_max_gap_days: Optional[int] = None
+    status: str = Field(description="PASS, FAIL, or INCONCLUSIVE")
+    detail: str
+    claimed_by: str = "system"
 
 
-def _parse_date(date_str: str) -> Optional[datetime]:
-    """Try to parse a date string in various formats."""
+class AmountVerificationResult(BaseModel):
+    """Result of an amount comparison."""
+    claim_id: str
+    description: str
+    amount_a: float
+    amount_b: float
+    difference: float
+    status: str = Field(description="MATCH, MISMATCH, or INCONCLUSIVE")
+    detail: str
+
+
+class WeightedEvidencePoint(BaseModel):
+    """Evidence point with mathematically calculated weight contribution."""
+    point_id: str
+    statement: str
+    source_tier: str
+    relevance: str
+    confidence: float
+    supports: str
+    tier_weight: float
+    relevance_weight: float
+    contribution: float
+    benefits_party: Optional[str]
+
+
+class DeterministicEvaluationResult(BaseModel):
+    """Complete output of Stage 3: Verification + Deterministic Weighing."""
+    case_id: str
+    date_verifications: List[DateVerificationResult] = Field(default_factory=list)
+    amount_verifications: List[AmountVerificationResult] = Field(default_factory=list)
+    weighted_evidence: List[WeightedEvidencePoint] = Field(default_factory=list)
+    cardholder_score: float
+    merchant_score: float
+    cardholder_pct: float
+    merchant_pct: float
+    net_direction: str = Field(description="CARDHOLDER, MERCHANT, or CONTESTED")
+    misstatements: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+# ==========================================================
+# 1. GENERIC DATE & AMOUNT MATH UTILITIES
+# ==========================================================
+
+def parse_flexible_date(date_str: str) -> Optional[datetime]:
+    """Parse flexible date formats (ISO, standard dates, natural month names)."""
     if not date_str:
         return None
+    
+    clean_str = str(date_str).strip()
+    # Normalize ISO with 'Z'
+    clean_str = clean_str.replace("Z", "+00:00")
+    
+    # Common ISO formats
     for fmt in (
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%dT%H:%M:%SZ",
         "%Y-%m-%dT%H:%M:%S%z",
-        "%Y-%m-%dT%H:%M:%S.%f",
         "%Y-%m-%dT%H:%M:%S.%f%z",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S.%f",
         "%Y-%m-%d",
+        "%m/%d/%Y",
+        "%d/%m/%Y",
+        "%B %d, %Y",
+        "%b %d, %Y",
+        "%d %B %Y",
+        "%d %b %Y",
     ):
         try:
-            return datetime.strptime(date_str.replace("+00:00", "Z").rstrip("Z"), fmt.rstrip("Z").rstrip("%z"))
+            return datetime.strptime(clean_str, fmt)
         except (ValueError, TypeError):
             continue
-    return None
-
-
-def _extract_delivery_date(context: Dict[str, Any]) -> Optional[datetime]:
-    """Extract delivery date from timeline events or delivery proof facts."""
-    for evt in context.get("timeline_events", []):
-        if evt.get("status", "").lower() == "delivered":
-            dt = _parse_date(str(evt.get("timestamp", "")))
-            if dt:
-                return dt
-
-    for fact in context.get("facts", []):
-        if fact.get("fact_type") == "delivery_proof":
-            dt = _parse_date(str(fact.get("delivery_date", "")))
-            if dt:
-                return dt
+            
+    # Regex fallback for "Month Day, Year" or "Month Day"
+    match = re.search(r"([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?", clean_str)
+    if match:
+        month_name, day, year = match.groups()
+        year = year or "2026"
+        try:
+            return datetime.strptime(f"{month_name} {day} {year}", "%B %d %Y")
+        except ValueError:
+            try:
+                return datetime.strptime(f"{month_name} {day} {year}", "%b %d %Y")
+            except ValueError:
+                pass
 
     return None
 
 
-def _extract_report_date(context: Dict[str, Any]) -> Optional[datetime]:
-    """Extract the date the cardholder first reported the issue."""
-    cardholder_dates: List[datetime] = []
-    for fact in context.get("facts", []):
-        if (fact.get("fact_type") == "message"
-                and fact.get("evidence_owner") == "cardholder"):
-            dt = _parse_date(str(fact.get("timestamp", "")))
-            if dt:
-                cardholder_dates.append(dt)
+def verify_date_gap(claim: DateClaim) -> DateVerificationResult:
+    """Universal date math: computes absolute or directed gap and verifies against expected window."""
+    dt_a = parse_flexible_date(claim.date_a)
+    dt_b = parse_flexible_date(claim.date_b)
 
-    if cardholder_dates:
-        return min(cardholder_dates)
+    if not dt_a or not dt_b:
+        return DateVerificationResult(
+            claim_id=claim.claim_id,
+            description=claim.description,
+            date_a=claim.date_a,
+            date_b=claim.date_b,
+            gap_days=-1,
+            expected_max_gap_days=claim.expected_max_gap_days,
+            status="INCONCLUSIVE",
+            detail=f"Could not parse one of the dates ({claim.date_a_label}: {claim.date_a}, {claim.date_b_label}: {claim.date_b})",
+            claimed_by=claim.claimed_by,
+        )
 
-    for ast in context.get("assertions", []):
-        if ast.get("subject") == "complaint_timing" and ast.get("owner") == "cardholder":
-            text = ast.get("text", "")
-            match = re.search(r"July\s+(\d+)", text)
-            if match:
-                day = int(match.group(1))
-                return datetime(2026, 7, day)
+    # Normalize tz-aware vs naive
+    if dt_a.tzinfo is not None and dt_b.tzinfo is None:
+        dt_a = dt_a.replace(tzinfo=None)
+    elif dt_b.tzinfo is not None and dt_a.tzinfo is None:
+        dt_b = dt_b.replace(tzinfo=None)
 
-    return None
+    gap = abs((dt_b - dt_a).days)
+    
+    if claim.expected_max_gap_days is not None:
+        within_window = gap <= claim.expected_max_gap_days
+        status = "PASS" if within_window else "FAIL"
+        detail = (
+            f"Gap between {claim.date_a_label} ({claim.date_a[:10]}) and {claim.date_b_label} ({claim.date_b[:10]}) "
+            f"is {gap} days. Policy max is {claim.expected_max_gap_days} days -> {'Within window' if within_window else 'Exceeded window'}."
+        )
+    else:
+        status = "PASS"
+        detail = f"Gap between {claim.date_a_label} ({claim.date_a[:10]}) and {claim.date_b_label} ({claim.date_b[:10]}) is {gap} days."
 
-
-def _extract_shipping_address(context: Dict[str, Any]) -> Optional[str]:
-    """Extract shipping address from purchase record facts or evidence."""
-    return None
-
-
-def _extract_delivery_address(context: Dict[str, Any]) -> Optional[str]:
-    """Extract delivery address from tracking timeline events."""
-    for evt in context.get("timeline_events", []):
-        if evt.get("status", "").lower() == "delivered":
-            return evt.get("location")
-    return None
-
-
-def _check_item_not_received(
-    context: Dict[str, Any],
-    findings: List[Dict[str, Any]],
-    next_eid,
-) -> List[Dict[str, Any]]:
-    """Deterministic checks for ITEM_NOT_RECEIVED disputes."""
-    evals: List[Dict[str, Any]] = []
-
-    # -- Check 1: Delivery status confirmed? -----------------
-    delivery_confirmed = False
-    delivery_finding_ids = []
-    for f in findings:
-        if f["finding_type"] == "fact" and f["subject"] == "status_event":
-            if "delivered" in f["statement"].lower():
-                delivery_confirmed = True
-                delivery_finding_ids.append(f["finding_id"])
-
-    evals.append({
-        "eval_id": next_eid(),
-        "check_id": "delivery_status",
-        "description": "Does tracking show a 'Delivered' status?",
-        "result": "PASS" if delivery_confirmed else "FAIL",
-        "detail": (
-            "Carrier tracking confirms delivery status as 'Delivered'."
-            if delivery_confirmed
-            else "No tracking event with 'Delivered' status found."
-        ),
-        "source_findings": delivery_finding_ids,
-        "effect": "SUPPORTS_MERCHANT" if delivery_confirmed else "SUPPORTS_CARDHOLDER",
-        "relevance": "DIRECT",
-        "confidence": 1.0,
-    })
-
-    # -- Check 2: Reporting window ---------------------------
-    delivery_date = _extract_delivery_date(context)
-    report_date = _extract_report_date(context)
-
-    policy_window_days: Optional[int] = None
-    policy_clause_fid = None
-    for f in findings:
-        if f["finding_type"] == "policy" and f.get("raw_data", {}).get("window_days"):
-            policy_window_days = f["raw_data"]["window_days"]
-            policy_clause_fid = f["finding_id"]
-            break
-
-    if delivery_date and report_date and policy_window_days is not None:
-        gap = (report_date - delivery_date).days
-        within_window = gap <= policy_window_days
-
-        evals.append({
-            "eval_id": next_eid(),
-            "check_id": "reporting_window",
-            "description": f"Was the dispute reported within {policy_window_days} days of delivery?",
-            "result": "PASS" if within_window else "FAIL",
-            "detail": (
-                f"Cardholder reported {gap} day(s) after delivery "
-                f"(delivery: {delivery_date.strftime('%Y-%m-%d')}, "
-                f"report: {report_date.strftime('%Y-%m-%d')}). "
-                f"Policy window is {policy_window_days} days. "
-                f"{'Within window.' if within_window else 'Outside window.'}"
-            ),
-            "source_findings": [policy_clause_fid] if policy_clause_fid else [],
-            "effect": "SUPPORTS_CARDHOLDER" if within_window else "SUPPORTS_MERCHANT",
-            "relevance": "HIGH",
-            "confidence": 1.0,
-        })
-
-        # -- Check 2b: Verify merchant's asserted timing ----
-        for ast in context.get("assertions", []):
-            if (ast.get("subject") == "complaint_timing"
-                    and ast.get("owner") == "merchant"
-                    and ast.get("asserted_value_days") is not None):
-                merchant_claimed_days = ast["asserted_value_days"]
-                actual_days = gap
-                if merchant_claimed_days != actual_days:
-                    finding_ids = [f["finding_id"] for f in findings
-                                   if f.get("raw_data", {}).get("assertion_id") == ast.get("assertion_id")]
-                    evals.append({
-                        "eval_id": next_eid(),
-                        "check_id": "complaint_timing_verification",
-                        "description": "Does the merchant's asserted complaint timing match actual dates?",
-                        "result": "FAIL",
-                        "detail": (
-                            f"Merchant asserted customer reported {merchant_claimed_days} days "
-                            f"after delivery, but actual gap is {actual_days} days "
-                            f"(delivery: {delivery_date.strftime('%Y-%m-%d')}, "
-                            f"first contact: {report_date.strftime('%Y-%m-%d')}). "
-                            f"Merchant misstated the timing."
-                        ),
-                        "source_findings": finding_ids,
-                        "effect": "CONTRADICTS_MERCHANT",
-                        "relevance": "MEDIUM",
-                        "confidence": 1.0,
-                    })
-
-    # -- Check 3: Address match ------------------------------
-    delivery_addr = _extract_delivery_address(context)
-    if delivery_addr:
-        evals.append({
-            "eval_id": next_eid(),
-            "check_id": "delivery_address_available",
-            "description": "Is a delivery address available from tracking?",
-            "result": "PASS",
-            "detail": f"Tracking shows delivery to: {delivery_addr}",
-            "source_findings": [f["finding_id"] for f in findings
-                               if f["subject"] == "status_event"
-                               and "delivered" in f["statement"].lower()],
-            "effect": "NEUTRAL",
-            "relevance": "MEDIUM",
-            "confidence": 1.0,
-        })
-
-    # -- Check 4: Signature/proof of delivery ----------------
-    has_delivery_proof = False
-    proof_finding_ids = []
-    has_signature = False
-    for f in findings:
-        if f["finding_type"] == "fact" and f["subject"] == "delivery_proof":
-            has_delivery_proof = True
-            proof_finding_ids.append(f["finding_id"])
-            raw = f.get("raw_data", {})
-            if raw.get("signature_collected"):
-                has_signature = True
-
-    if has_delivery_proof:
-        evals.append({
-            "eval_id": next_eid(),
-            "check_id": "delivery_proof_exists",
-            "description": "Is there photographic or documentary proof of delivery?",
-            "result": "PASS",
-            "detail": (
-                f"Delivery proof exists. "
-                f"{'Signature was collected.' if has_signature else 'No signature collected (contactless delivery).'}"
-            ),
-            "source_findings": proof_finding_ids,
-            "effect": "SUPPORTS_MERCHANT",
-            "relevance": "HIGH",
-            "confidence": 1.0,
-        })
-
-    return evals
+    return DateVerificationResult(
+        claim_id=claim.claim_id,
+        description=claim.description,
+        date_a=claim.date_a,
+        date_b=claim.date_b,
+        gap_days=gap,
+        expected_max_gap_days=claim.expected_max_gap_days,
+        status=status,
+        detail=detail,
+        claimed_by=claim.claimed_by,
+    )
 
 
-def _check_unauthorized(context, findings, next_eid):
-    """Deterministic checks for UNAUTHORIZED_TRANSACTION."""
-    evals = []
-    for fact in context.get("facts", []):
-        if fact.get("fact_type") == "authorization_data":
-            avs = fact.get("avs_result", "")
-            cvv = fact.get("cvv_result", "")
-            tds = fact.get("three_ds_status", "")
+def verify_amount_match(claim: AmountClaim, tolerance: float = 0.01) -> AmountVerificationResult:
+    """Universal amount math: verifies equality or calculates discrepancy."""
+    diff = round(abs(claim.amount_a - claim.amount_b), 2)
+    is_match = diff <= tolerance
 
-            if avs:
-                match = avs.lower() in ("match", "pass", "y")
-                evals.append({
-                    "eval_id": next_eid(), "check_id": "avs_match",
-                    "description": "Did AVS verification pass?",
-                    "result": "PASS" if match else "FAIL",
-                    "detail": f"AVS result: {avs}",
-                    "source_findings": [],
-                    "effect": "SUPPORTS_MERCHANT" if match else "SUPPORTS_CARDHOLDER",
-                    "relevance": "HIGH", "confidence": 1.0,
-                })
-            if cvv:
-                match = cvv.lower() in ("match", "pass", "m")
-                evals.append({
-                    "eval_id": next_eid(), "check_id": "cvv_match",
-                    "description": "Did CVV verification pass?",
-                    "result": "PASS" if match else "FAIL",
-                    "detail": f"CVV result: {cvv}",
-                    "source_findings": [],
-                    "effect": "SUPPORTS_MERCHANT" if match else "SUPPORTS_CARDHOLDER",
-                    "relevance": "HIGH", "confidence": 1.0,
-                })
-            if tds:
-                authenticated = tds.lower() in ("authenticated", "success", "y")
-                evals.append({
-                    "eval_id": next_eid(), "check_id": "three_ds_status",
-                    "description": "Was 3D Secure authentication completed?",
-                    "result": "PASS" if authenticated else "FAIL",
-                    "detail": f"3DS status: {tds}",
-                    "source_findings": [],
-                    "effect": "SUPPORTS_MERCHANT" if authenticated else "NEUTRAL",
-                    "relevance": "HIGH", "confidence": 1.0,
-                })
-    return evals
+    if claim.should_match:
+        status = "MATCH" if is_match else "MISMATCH"
+        detail = (
+            f"{claim.amount_a_label} (${claim.amount_a:.2f}) matches {claim.amount_b_label} (${claim.amount_b:.2f})"
+            if is_match else
+            f"{claim.amount_a_label} (${claim.amount_a:.2f}) differs from {claim.amount_b_label} (${claim.amount_b:.2f}) by ${diff:.2f}"
+        )
+    else:
+        status = "DISCREPANCY_CONFIRMED" if not is_match else "UNEXPECTED_MATCH"
+        detail = (
+            f"Discrepancy confirmed: {claim.amount_a_label} (${claim.amount_a:.2f}) vs {claim.amount_b_label} (${claim.amount_b:.2f}) (diff: ${diff:.2f})"
+            if not is_match else
+            f"Amounts are identical (${claim.amount_a:.2f})"
+        )
+
+    return AmountVerificationResult(
+        claim_id=claim.claim_id,
+        description=claim.description,
+        amount_a=claim.amount_a,
+        amount_b=claim.amount_b,
+        difference=diff,
+        status=status,
+        detail=detail,
+    )
 
 
-def _check_duplicate(context, findings, next_eid):
-    """Deterministic checks for DUPLICATE_PROCESSING."""
-    return []
+# ==========================================================
+# 2. DETERMINISTIC WEIGHING CALCULATION
+# ==========================================================
+
+def compute_deterministic_weights(
+    evidence_points: List[EvidencePoint],
+    misstatements: Optional[List[Dict[str, Any]]] = None,
+) -> tuple[List[WeightedEvidencePoint], float, float, float, float, str]:
+    """Calculate objective evidence scores and normalized percentages.
+
+    Formula per evidence point:
+      Weight = Relevance (5-level) x Confidence (0-1) x TierWeight (3-level)
+    """
+    cardholder_score = 0.0
+    merchant_score = 0.0
+    weighted_list: List[WeightedEvidencePoint] = []
+
+    for ep in evidence_points:
+        tier_weight = EVIDENCE_SOURCE_TIERS.get(ep.source_tier, 0.35)
+        rel_weight = _RELEVANCE_WEIGHT.get(ep.relevance, 0.35)
+        conf = max(0.0, min(1.0, float(ep.confidence)))
+
+        contribution = round(rel_weight * conf * tier_weight, 4)
+
+        benefits_party = None
+        if ep.supports == "cardholder":
+            cardholder_score += contribution
+            benefits_party = "cardholder"
+        elif ep.supports == "merchant":
+            merchant_score += contribution
+            benefits_party = "merchant"
+
+        weighted_list.append(WeightedEvidencePoint(
+            point_id=ep.point_id,
+            statement=ep.statement,
+            source_tier=ep.source_tier,
+            relevance=ep.relevance,
+            confidence=conf,
+            supports=ep.supports,
+            tier_weight=tier_weight,
+            relevance_weight=rel_weight,
+            contribution=contribution,
+            benefits_party=benefits_party,
+        ))
+
+    # Apply penalty for detected misstatements
+    if misstatements:
+        for m in misstatements:
+            party = m.get("misstated_party")
+            if party == "merchant":
+                merchant_score = max(0.0, merchant_score - 0.15)
+            elif party == "cardholder":
+                cardholder_score = max(0.0, cardholder_score - 0.15)
+
+    cardholder_score = max(0.0, cardholder_score)
+    merchant_score = max(0.0, merchant_score)
+    total = cardholder_score + merchant_score
+
+    if total > 0:
+        cardholder_pct = round(cardholder_score / total, 4)
+        merchant_pct = round(merchant_score / total, 4)
+    else:
+        cardholder_pct = 0.5
+        merchant_pct = 0.5
+
+    if abs(cardholder_pct - merchant_pct) < 0.05:
+        net_direction = "CONTESTED"
+    elif cardholder_pct > merchant_pct:
+        net_direction = "CARDHOLDER"
+    else:
+        net_direction = "MERCHANT"
+
+    return weighted_list, cardholder_score, merchant_score, cardholder_pct, merchant_pct, net_direction
 
 
-def _check_credit_not_processed(context, findings, next_eid):
-    """Deterministic checks for CREDIT_NOT_PROCESSED."""
-    evals = []
-    for fact in context.get("facts", []):
-        if fact.get("fact_type") == "processor_record":
-            refund_ts = fact.get("refund_timestamp")
-            if refund_ts:
-                evals.append({
-                    "eval_id": next_eid(), "check_id": "refund_issued",
-                    "description": "Is there a processor record showing a refund was issued?",
-                    "result": "PASS",
-                    "detail": f"Refund record found at {refund_ts}",
-                    "source_findings": [],
-                    "effect": "SUPPORTS_MERCHANT",
-                    "relevance": "DIRECT", "confidence": 1.0,
-                })
-    return evals
+# ==========================================================
+# 3. MAIN EVALUATOR PIPELINE ENTRY POINT
+# ==========================================================
 
+def run_deterministic_evaluations(analysis: CaseAnalysis) -> DeterministicEvaluationResult:
+    """Execute Stage 3: verify date/amount claims and compute objective weights.
 
-def _check_subscription(context, findings, next_eid):
-    """Deterministic checks for SUBSCRIPTION_CANCELED."""
-    return []
+    Args:
+        analysis: Validated CaseAnalysis from Stage 2.
 
+    Returns:
+        DeterministicEvaluationResult containing verification outcomes and mathematically computed weights.
+    """
+    print("  [Deterministic] Running date & amount verifications...")
+    date_results = [verify_date_gap(dc) for dc in analysis.date_claims]
+    amount_results = [verify_amount_match(ac) for ac in analysis.amount_claims]
 
-def _check_processing_error(context, findings, next_eid):
-    """Deterministic checks for PROCESSING_ERROR."""
-    return []
+    # Detect party misstatements from date/amount checks
+    misstatements: List[Dict[str, Any]] = []
+    for dr in date_results:
+        if dr.status == "FAIL" and dr.claimed_by in ("merchant", "cardholder"):
+            misstatements.append({
+                "claim_id": dr.claim_id,
+                "misstated_party": dr.claimed_by,
+                "reason": dr.detail,
+            })
+
+    print(f"  [Deterministic] Completed {len(date_results)} date checks and {len(amount_results)} amount checks")
+
+    # Compute deterministic scores using fixed tier and relevance multipliers
+    weighted_pts, ch_score, me_score, ch_pct, me_pct, net_dir = compute_deterministic_weights(
+        analysis.evidence_points, misstatements
+    )
+
+    print(f"  [Deterministic] Evidence Scores -> Cardholder: {ch_score:.3f} ({ch_pct:.1%}) | "
+          f"Merchant: {me_score:.3f} ({me_pct:.1%}) -> Net: {net_dir}")
+
+    return DeterministicEvaluationResult(
+        case_id=analysis.case_id,
+        date_verifications=date_results,
+        amount_verifications=amount_results,
+        weighted_evidence=weighted_pts,
+        cardholder_score=round(ch_score, 4),
+        merchant_score=round(me_score, 4),
+        cardholder_pct=ch_pct,
+        merchant_pct=me_pct,
+        net_direction=net_dir,
+        misstatements=misstatements,
+    )

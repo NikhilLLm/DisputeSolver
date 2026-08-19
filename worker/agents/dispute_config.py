@@ -21,13 +21,41 @@ from typing import Any, Dict, List
 # DISPUTE REASON NORMALIZATION
 # --------------------------------------------------------------
 
+# Reason code & alias lookup table
+_REASON_CODE_MAP: Dict[str, str] = {
+    "13.1": "ITEM_NOT_RECEIVED",
+    "13.3": "ITEM_NOT_AS_DESCRIBED",
+    "NOT_AS_DESCRIBED": "ITEM_NOT_AS_DESCRIBED",
+    "10.4": "UNAUTHORIZED_TRANSACTION",
+    "4837": "UNAUTHORIZED_TRANSACTION",
+    "FRAUD": "UNAUTHORIZED_TRANSACTION",
+    "12.6": "DUPLICATE_PROCESSING",
+    "12.6.1": "DUPLICATE_PROCESSING",
+    "4834": "DUPLICATE_PROCESSING",
+    "DUPLICATE": "DUPLICATE_PROCESSING",
+    "13.6": "CREDIT_NOT_PROCESSED",
+    "4860": "CREDIT_NOT_PROCESSED",
+    "REFUND_NOT_PROCESSED": "CREDIT_NOT_PROCESSED",
+    "13.2": "SUBSCRIPTION_CANCELED",
+    "4841": "SUBSCRIPTION_CANCELED",
+    "SUBSCRIPTION": "SUBSCRIPTION_CANCELED",
+    "CANCELLED_RECURRING": "SUBSCRIPTION_CANCELED",
+    "12.2": "PROCESSING_ERROR",
+    "INCORRECT_AMOUNT": "PROCESSING_ERROR",
+}
+
+
 def normalize_dispute_reason(raw_reason: str) -> str:
     """Format canonical dispute reason to uppercase standard key."""
     if not raw_reason:
         return "UNKNOWN"
-    clean = re.sub(r"\(.*?\)", "", raw_reason).strip()
+    clean = re.sub(r"\(.*?\)", "", str(raw_reason)).strip()
     key = clean.upper().replace(" ", "_").replace("-", "_")
 
+    if key in _REASON_CODE_MAP:
+        return _REASON_CODE_MAP[key]
+    if raw_reason in _REASON_CODE_MAP:
+        return _REASON_CODE_MAP[raw_reason]
     if key in DISPUTE_CONFIG:
         return key
     for canonical in DISPUTE_CONFIG:

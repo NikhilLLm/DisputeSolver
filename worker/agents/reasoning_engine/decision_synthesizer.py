@@ -1,182 +1,70 @@
 """
-Decision Synthesizer Module.
+Decision Synthesizer Module — Compact Pydantic Verdict & Explainable Narrative.
 
-Produces the final structured dispute decision with:
-1. An Executive Summary (compact, distilled snapshot with verdict, confidence, decisive evidence, and balance).
-2. Full Provenance & Audit Trail (complete evaluations, finding nodes, and reasoning trace).
+Stage 4 of the reasoning pipeline:
+  1. Takes the deterministic scores and verification results from Stage 3.
+  2. The final verdict and confidence score are ALREADY mathematically decided:
+     NO LLM hallucination in verdict or weights.
+  3. Uses a single constrained LLM call to write an executive narrative,
+     explain why the winning party's evidence prevails, and address counterarguments.
+  4. Returns a clean, compact `VerdictPackage` (~30-40 lines JSON).
 """
 
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List
-
+import time
+from typing import Any, Dict, List, Literal, Optional
 from openai import OpenAI
+from pydantic import BaseModel, Field
+
+from worker.agents.reasoning_engine.case_analyst import CaseAnalysis
+from worker.agents.reasoning_engine.deterministic_evaluator import DeterministicEvaluationResult
 from worker.agents.reasoning_engine.common import _get_llm_client, _llm_json_call
 
 
-def synthesize_decision(
-    case_id: str,
-    config: Dict[str, Any],
-    findings: List[Dict[str, Any]],
-    deterministic_evals: List[Dict[str, Any]],
-    semantic_evals: List[Dict[str, Any]],
-    conflicts: List[Dict[str, Any]],
-    weighing: Dict[str, Any],
-    context: Dict[str, Any],
-) -> Dict[str, Any]:
-    """Produce the final structured decision with an executive summary and full audit trail."""
-    client = _get_llm_client()
-    all_evals = deterministic_evals + semantic_evals
+# ==========================================================
+# PYDANTIC OUTPUT MODELS FOR THE VERDICT
+# ==========================================================
 
-    net = weighing.get("net_direction", "CONTESTED")
-    ch_pct = weighing.get("cardholder_pct", 0.5)
-    me_pct = weighing.get("merchant_pct", 0.5)
+class ReasoningStatement(BaseModel):
+    """A single weighted evidence statement justifying the verdict."""
+    statement: str = Field(description="Clear factual statement")
+    weight: float = Field(description="Deterministic contribution score (0.0 - 1.0)")
+    source_tier: str = Field(description="TIER_1_TELEMETRY, TIER_2_COMMUNICATION, or TIER_3_ASSERTION")
+    supports: str = Field(description="cardholder or merchant")
+    evidence_ids: List[str] = Field(default_factory=list)
 
-    total_meaningful_evals = sum(
-        1 for e in all_evals
-        if e.get("effect") not in ("NEUTRAL", "INSUFFICIENT")
-    )
 
-    if total_meaningful_evals < 2:
-        outcome = "INSUFFICIENT_EVIDENCE"
-        confidence = 0.3
-    elif net == "CONTESTED":
-        outcome = "INSUFFICIENT_EVIDENCE"
-        confidence = max(ch_pct, me_pct)
-    elif net == "CARDHOLDER":
-        outcome = "CARDHOLDER"
-        confidence = ch_pct
-    else:
-        outcome = "MERCHANT"
-        confidence = me_pct
+class DeterministicMetrics(BaseModel):
+    """Objective scoring summary calculated deterministically in Stage 3."""
+    cardholder_score: float
+    merchant_score: float
+    cardholder_pct: str
+    merchant_pct: str
+    net_direction: str
+    date_verifications_count: int
+    amount_verifications_count: int
+    misstatements_detected: int
 
-    key_factors: List[str] = []
-    evidence_basis: List[str] = []
-    policy_basis: List[str] = []
-    counterarguments: List[str] = []
-    decisive_supporting_evidence: List[Dict[str, Any]] = []
 
-    finding_map = {f["finding_id"]: f for f in findings}
+class VerdictPackage(BaseModel):
+    """The final compact, auditable decision package."""
+    case_id: str
+    verdict: Literal["CARDHOLDER", "MERCHANT", "INSUFFICIENT_EVIDENCE"]
+    confidence_score: float = Field(ge=0.0, le=1.0)
+    confidence_band: str = Field(description="high_confidence, moderate_confidence, low_confidence, human_review_required")
+    primary_reason: str = Field(description="One-sentence decisive reason for the verdict")
+    reasoning_statements: List[ReasoningStatement] = Field(default_factory=list, description="Top weighted supporting statements")
+    policy_basis: str = Field(default="N/A", description="Applicable policy rule evaluation")
+    counterarguments_addressed: List[str] = Field(default_factory=list, description="Opposing claims and why they were rebutted")
+    executive_summary: str = Field(description="2-4 sentence executive narrative")
+    deterministic_metrics: DeterministicMetrics
 
-    for ev in all_evals:
-        relevance = ev.get("relevance", "MEDIUM")
-        effect = ev.get("effect", "NEUTRAL")
-        fid = ev.get("finding_id", "")
-        finding = finding_map.get(fid, {})
-        reason = ev.get("reason", ev.get("detail", ""))
 
-        factor_text = f"[{ev.get('eval_id', '')}->{fid}] {reason}"
-
-        if relevance in ("HIGH", "DIRECT"):
-            if ev.get("eval_type") == "policy":
-                policy_basis.append(factor_text)
-            else:
-                evidence_basis.append(factor_text)
-
-            if effect in ("SUPPORTS_CARDHOLDER", "CONTRADICTS_MERCHANT"):
-                if outcome == "MERCHANT":
-                    counterarguments.append(factor_text)
-                else:
-                    key_factors.append(factor_text)
-                    decisive_supporting_evidence.append({
-                        "finding_id": fid,
-                        "source_tier": finding.get("source_tier", "TIER_2_COMMUNICATION"),
-                        "statement": finding.get("statement", reason),
-                        "evidence_id": finding.get("source_evidence", []),
-                        "impact": "SUPPORTS_CARDHOLDER",
-                    })
-            elif effect in ("SUPPORTS_MERCHANT", "CONTRADICTS_CARDHOLDER"):
-                if outcome == "CARDHOLDER":
-                    counterarguments.append(factor_text)
-                else:
-                    key_factors.append(factor_text)
-                    decisive_supporting_evidence.append({
-                        "finding_id": fid,
-                        "source_tier": finding.get("source_tier", "TIER_1_TELEMETRY"),
-                        "statement": finding.get("statement", reason),
-                        "evidence_id": finding.get("source_evidence", []),
-                        "impact": "SUPPORTS_MERCHANT",
-                    })
-
-    explanation = _generate_explanation(
-        client, case_id, config, outcome, confidence,
-        findings, all_evals, conflicts, weighing
-    )
-
-    insufficient = []
-    for q in config.get("evaluation_questions", []):
-        addressed = any(
-            ev.get("addresses_question", "") and q.lower() in ev.get("addresses_question", "").lower()
-            for ev in semantic_evals
-        )
-        if not addressed:
-            det_addressed = any(
-                q.lower()[:30] in ev.get("description", "").lower()
-                for ev in deterministic_evals
-            )
-            if not det_addressed:
-                insufficient.append(q)
-
-    # Build concise executive summary block
-    executive_summary = {
-        "case_id": case_id,
-        "verdict": outcome,
-        "confidence": f"{round(confidence * 100, 1)}% ({_confidence_band(confidence)})",
-        "primary_decision_rationale": explanation.get("primary_reason", ""),
-        "narrative_summary": explanation.get("narrative", ""),
-        "decisive_supporting_evidence": decisive_supporting_evidence[:4],
-        "contested_points_and_counterarguments": counterarguments[:3],
-        "evidence_balance": {
-            "merchant_weight": f"{weighing['merchant_pct']:.1%}",
-            "cardholder_weight": f"{weighing['cardholder_pct']:.1%}",
-            "net_direction": weighing["net_direction"],
-        },
-    }
-
-    return {
-        "executive_summary": executive_summary,
-        "case_id": case_id,
-        "verdict": outcome,
-        "confidence_score": round(confidence, 4),
-        "confidence_band": _confidence_band(confidence),
-        "primary_reason": explanation.get("primary_reason", ""),
-        "key_factors": key_factors,
-        "counterarguments_considered": counterarguments,
-        "policy_basis": policy_basis,
-        "evidence_basis": evidence_basis,
-        "insufficient_evidence": insufficient,
-        "explanation": explanation.get("narrative", ""),
-        "conflicts": conflicts,
-        "weighing_summary": {
-            "cardholder_support": weighing["cardholder_support"],
-            "merchant_support": weighing["merchant_support"],
-            "cardholder_pct": weighing["cardholder_pct"],
-            "merchant_pct": weighing["merchant_pct"],
-        },
-        "findings": [
-            {
-                "finding_id": f["finding_id"],
-                "subject": f["subject"],
-                "statement": f["statement"],
-                "owner": f["owner"],
-                "source_evidence": f["source_evidence"],
-                "source_nodes": f["source_nodes"],
-                "source_tier": f.get("source_tier", "TIER_3_ASSERTION"),
-                "tier_weight": f.get("tier_weight", 0.35),
-                "dispute_relevance": f["dispute_relevance"],
-                "finding_type": f["finding_type"],
-            }
-            for f in findings
-        ],
-        "evaluations": {
-            "deterministic": deterministic_evals,
-            "semantic": semantic_evals,
-        },
-        "reasoning_trace": _build_reasoning_trace(outcome, all_evals, conflicts, findings),
-        "pipeline": "hybrid_reasoning_engine_v1",
-    }
-
+# ==========================================================
+# CONFIDENCE BAND HELPER
+# ==========================================================
 
 def _confidence_band(score: float) -> str:
     if score >= 0.85:
@@ -189,104 +77,133 @@ def _confidence_band(score: float) -> str:
         return "human_review_required"
 
 
-def _generate_explanation(
-    client: OpenAI,
-    case_id: str,
+# ==========================================================
+# PROMPT & SYNTHESIS
+# ==========================================================
+
+_SYNTHESIZER_SYSTEM_PROMPT = """You are a neutral financial dispute arbitrator.
+
+Your job is to produce a concise, professional, and explainable verdict narrative for a chargeback case.
+
+RULES:
+1. The mathematical verdict (CARDHOLDER, MERCHANT, or INSUFFICIENT_EVIDENCE) and confidence score have ALREADY been computed deterministically. You MUST respect them.
+2. Formulate the primary_reason and executive_summary based strictly on the verified facts, deterministic check results, and policy evaluations provided.
+3. Explicitly explain how opposing counterarguments were rebutted by higher-tier evidence (Tier 1 Telemetry > Tier 2 Communication > Tier 3 Assertion).
+4. Return ONLY valid JSON matching the specified schema."""
+
+
+def synthesize_verdict(
+    analysis: CaseAnalysis,
+    eval_result: DeterministicEvaluationResult,
     config: Dict[str, Any],
-    outcome: str,
-    confidence: float,
-    findings: List[Dict[str, Any]],
-    evaluations: List[Dict[str, Any]],
-    conflicts: List[Dict[str, Any]],
-    weighing: Dict[str, Any],
-) -> Dict[str, Any]:
-    """Generate a human-readable explanation grounded in evaluations."""
-    canonical_reason = config.get("canonical_reason", "UNKNOWN")
+) -> VerdictPackage:
+    """Run Stage 4: Synthesize explainable verdict narrative and compact JSON output.
 
-    evals_text = []
-    for ev in evaluations:
-        evals_text.append(
-            f"  {ev.get('eval_id', '')}: finding={ev.get('finding_id', '')}, "
-            f"effect={ev.get('effect', '')}, relevance={ev.get('relevance', '')}, "
-            f"confidence={ev.get('confidence', '')}, "
-            f"reason=\"{ev.get('reason', ev.get('detail', ''))}\""
+    Args:
+        analysis: CaseAnalysis from Stage 2.
+        eval_result: DeterministicEvaluationResult from Stage 3.
+        config: Dispute configuration dict.
+
+    Returns:
+        VerdictPackage: Validated compact verdict model.
+    """
+    client = _get_llm_client()
+
+    # Determine mathematically grounded verdict
+    if eval_result.net_direction == "CONTESTED" or (eval_result.cardholder_score < 0.2 and eval_result.merchant_score < 0.2):
+        verdict = "INSUFFICIENT_EVIDENCE"
+        confidence = 0.5
+    elif eval_result.net_direction == "CARDHOLDER":
+        verdict = "CARDHOLDER"
+        confidence = eval_result.cardholder_pct
+    else:
+        verdict = "MERCHANT"
+        confidence = eval_result.merchant_pct
+
+    conf_band = _confidence_band(confidence)
+
+    # Sort weighted evidence points to select the top supporting points for the winner
+    winner_str = "cardholder" if verdict == "CARDHOLDER" else "merchant"
+    winning_points = [
+        wp for wp in eval_result.weighted_evidence
+        if wp.benefits_party == winner_str
+    ]
+    winning_points.sort(key=lambda x: x.contribution, reverse=True)
+    top_supporting = winning_points[:5]
+
+    # Convert top points to ReasoningStatement models
+    reasoning_stmts = [
+        ReasoningStatement(
+            statement=p.statement,
+            weight=p.contribution,
+            source_tier=p.source_tier,
+            supports=p.supports,
+            evidence_ids=[p.point_id],
         )
+        for p in top_supporting
+    ]
 
-    conflicts_text = []
-    for c in conflicts:
-        conflicts_text.append(
-            f"  {c['conflict_id']}: {c['proposition']} -- "
-            f"cardholder strength={c['side_a']['strength']}, "
-            f"merchant strength={c['side_b']['strength']}, "
-            f"resolution={c['resolution']}"
-        )
-
-    system_prompt = (
-        "You are a neutral dispute resolution report writer. "
-        "Produce a clear, fair explanation of a dispute outcome. "
-        "You must ONLY reference evidence and evaluations provided -- never invent facts. "
-        "Cite finding IDs and evaluation IDs. "
-        "Return ONLY valid JSON."
-    )
-
-    user_prompt = f"""Write the final decision explanation for this dispute.
-
-CASE: {case_id}
-DISPUTE TYPE: {canonical_reason}
-OUTCOME: {outcome}
-CONFIDENCE: {confidence}
-
-WEIGHING:
-  Cardholder support: {weighing['cardholder_support']} ({weighing['cardholder_pct']:.1%})
-  Merchant support: {weighing['merchant_support']} ({weighing['merchant_pct']:.1%})
-
-EVALUATIONS:
-{chr(10).join(evals_text)}
-
-CONFLICTS:
-{chr(10).join(conflicts_text) if conflicts_text else '  None identified'}
-
-Return a JSON object with:
-- "primary_reason": one-sentence summary of why the outcome was reached
-- "narrative": 3-5 sentence explanation citing specific finding IDs and evaluation IDs
-  explaining the reasoning chain: what the cardholder claimed, what evidence the merchant
-  provided, what objective checks showed, what policy conditions applied, and why the
-  final outcome was reached. If there are conflicts, explain how they were resolved.
-"""
-
-    result = _llm_json_call(client, system_prompt, user_prompt)
-    return {
-        "primary_reason": result.get("primary_reason", f"Decision based on {canonical_reason} evaluation"),
-        "narrative": result.get("narrative", "Unable to generate narrative explanation."),
+    # Build prompt context for LLM narrative generation
+    prompt_context = {
+        "case_id": analysis.case_id,
+        "dispute_category": analysis.dispute_category,
+        "mathematical_verdict": verdict,
+        "confidence_score": confidence,
+        "cardholder_score": eval_result.cardholder_score,
+        "merchant_score": eval_result.merchant_score,
+        "cardholder_pct": f"{eval_result.cardholder_pct:.1%}",
+        "merchant_pct": f"{eval_result.merchant_pct:.1%}",
+        "date_verifications": [dv.model_dump() for dv in eval_result.date_verifications],
+        "amount_verifications": [av.model_dump() for av in eval_result.amount_verifications],
+        "top_supporting_evidence": [p.model_dump() for p in top_supporting],
+        "policy_evaluations": [pe.model_dump() for pe in analysis.policy_evaluations],
+        "conflicts": [cf.model_dump() for cf in analysis.conflicts],
+        "misstatements": eval_result.misstatements,
     }
 
+    user_prompt = f"""Synthesize the final verdict explanation for this dispute case.
 
-def _build_reasoning_trace(
-    outcome: str,
-    evaluations: List[Dict[str, Any]],
-    conflicts: List[Dict[str, Any]],
-    findings: List[Dict[str, Any]],
-) -> List[str]:
-    """Build a human-readable reasoning trace for auditability."""
-    trace: List[str] = []
+CASE ANALYSIS & VERIFICATION RESULTS:
+{json.dumps(prompt_context, indent=2)}
 
-    trace.append(f"Final outcome: {outcome}")
-    trace.append(f"Total evaluations: {len(evaluations)}")
-    trace.append(f"Conflicts identified: {len(conflicts)}")
+Return a JSON object with these exact keys:
+{{
+  "primary_reason": "One-sentence decisive reason explaining why {verdict} won this dispute",
+  "policy_basis": "Summary of applicable policy clause compliance if policies were evaluated, or 'Not applicable —no merchant policy submitted for this dispute category' if none exist",
+  "counterarguments_addressed": [
+    "Opposing party's claim and how it was rebutted by higher-tier evidence or mathematical verification"
+  ],
+  "executive_summary": "2-4 sentence clear, professional narrative summarizing the claim, the decisive evidence, and the resolution"
+}}"""
 
-    high_impact = [e for e in evaluations if e.get("relevance") in ("HIGH", "DIRECT")]
-    for ev in high_impact:
-        fid = ev.get("finding_id", "?")
-        finding = next((f for f in findings if f["finding_id"] == fid), None)
-        source = finding.get("source_evidence", []) if finding else []
-        trace.append(
-            f"  {ev.get('eval_id', '')} -> {fid} -> {source}: "
-            f"effect={ev.get('effect', '')}, relevance={ev.get('relevance', '')}"
-        )
+    print("  [LLM] Calling verdict narrative synthesizer...")
+    start = time.time()
+    raw_narrative = _llm_json_call(client, _SYNTHESIZER_SYSTEM_PROMPT, user_prompt)
+    elapsed = round(time.time() - start, 2)
+    print(f"  [LLM] Verdict synthesizer responded in {elapsed}s")
 
-    for c in conflicts:
-        trace.append(
-            f"  Conflict on '{c['proposition']}': resolved as {c['resolution']}"
-        )
+    metrics = DeterministicMetrics(
+        cardholder_score=eval_result.cardholder_score,
+        merchant_score=eval_result.merchant_score,
+        cardholder_pct=f"{eval_result.cardholder_pct:.1%}",
+        merchant_pct=f"{eval_result.merchant_pct:.1%}",
+        net_direction=eval_result.net_direction,
+        date_verifications_count=len(eval_result.date_verifications),
+        amount_verifications_count=len(eval_result.amount_verifications),
+        misstatements_detected=len(eval_result.misstatements),
+    )
 
-    return trace
+    package = VerdictPackage(
+        case_id=analysis.case_id,
+        verdict=verdict,
+        confidence_score=round(confidence, 4),
+        confidence_band=conf_band,
+        primary_reason=raw_narrative.get("primary_reason", f"Verdict based on {analysis.dispute_category} evidence analysis."),
+        reasoning_statements=reasoning_stmts,
+        policy_basis=raw_narrative.get("policy_basis", "N/A"),
+        counterarguments_addressed=raw_narrative.get("counterarguments_addressed", []),
+        executive_summary=raw_narrative.get("executive_summary", "Decision reached based on evidence hierarchy and deterministic verification."),
+        deterministic_metrics=metrics,
+    )
+
+    return package

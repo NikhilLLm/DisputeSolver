@@ -1,25 +1,20 @@
 """
-Dispute Reasoning Orchestrator.
+Dispute Reasoning Orchestrator — Lean 4-Stage Hybrid Engine.
 
-Runs the full reasoning pipeline:
-  1. Read dispute reason from graph
-  2. Load dispute configuration
-  3. Retrieve shared graph context (once)
-  4. Generate structured findings
-  5. Run deterministic checks (Python)
-  6. Run semantic evaluations (LLM)
-  7. Detect conflicts
-  8. Fair weighing
-  9. Synthesize decision with provenance
-  10. Write results
+Executes the streamlined 4-stage pipeline:
+  Stage 1: Bounded 2-query subgraph retrieval from Neo4j
+  Stage 2: LLM Case Analyst → Typed `CaseAnalysis` Pydantic model
+  Stage 3: Deterministic Verifier + Mathematical Weigher (generic date/amount math)
+  Stage 4: LLM Verdict Synthesizer → Compact `VerdictPackage` (~30-40 lines JSON)
 
-This is the single entry point for the reasoning engine.
+Universal across all 8 dispute categories without hardcoded branches.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,23 +25,24 @@ from dotenv import load_dotenv
 from worker.agents.dispute_config import get_dispute_config, normalize_dispute_reason
 from worker.agents.graph_retrieval import fetch_case_reasoning_context
 from worker.agents.reasoning_engine import (
-    generate_findings,
-    run_deterministic_checks,
-    run_semantic_evaluations,
-    detect_conflicts,
-    fair_weighing,
-    synthesize_decision,
+    CaseAnalysis,
+    DeterministicEvaluationResult,
+    VerdictPackage,
+    analyze_case,
+    run_deterministic_evaluations,
+    save_analysis,
+    synthesize_verdict,
 )
 
 load_dotenv()
 
 
 class DisputeReasoningOrchestrator:
-    """Orchestrates the full dispute reasoning pipeline.
+    """Orchestrates the lean 4-stage dispute reasoning pipeline.
 
     Usage:
         orchestrator = DisputeReasoningOrchestrator()
-        result = orchestrator.run("DSP-2026-00187")
+        result = orchestrator.run("DSP-2026-00201")
     """
 
     def __init__(
@@ -55,183 +51,171 @@ class DisputeReasoningOrchestrator:
         output_dir: Optional[Path] = None,
     ):
         self.db_name = db_name or os.getenv("NEO4J_DATABASE", "neo4j")
-        self.output_dir = output_dir or Path("worker/agents")
+        self.output_dir = output_dir or Path("output/decisions")
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def run(self, case_id: str) -> Dict[str, Any]:
-        """Execute the full reasoning pipeline for a case.
+    def run(self, case_id: Optional[str] = None) -> Dict[str, Any]:
+        """Execute the 4-stage reasoning pipeline for the active case in Neo4j.
 
-        Returns the structured decision dict.
+        Returns:
+            Dict[str, Any]: Compact, structured verdict dictionary.
         """
+        active_case = case_id or _auto_detect_active_case_id(self.db_name)
+        if not active_case or active_case == "UNKNOWN":
+            print("\n[ABORT] No active case found in Neo4j graph or canonical extractions. Pipeline will not trigger.\n")
+            return self._error_result("UNKNOWN", "No active case found in graph database")
+
+        case_id = active_case
+
         start_time = time.time()
-        print(f"\n{'=' * 60}")
-        print(f"DISPUTE REASONING ENGINE -- Case {case_id}")
-        print(f"{'=' * 60}")
+        print(f"\n{'=' * 65}")
+        print(f"DISPUTE REASONING ENGINE (Hybrid 4-Stage) — Case {case_id}")
+        print(f"{'=' * 65}")
 
-        # -- Step 1: Read dispute reason from graph ----------
-        print("\n[1/9] Reading dispute reason from graph...")
-        # First do a lightweight query just for the dispute reason
-        from worker.agents.graph_retrieval import _connect
-        driver = _connect()
-        db = self.db_name
+        # ==========================================================
+        # STAGE 1: Bounded 2-Query Subgraph Retrieval
+        # ==========================================================
+        print("\n[1/4] Retrieving full case context from Neo4j (2 batch queries)...")
+        context = fetch_case_reasoning_context(case_id, db_name=self.db_name)
 
-        with driver.session(database=db) as session:
-            result = session.run(
-                """
-                MATCH (c:Case {case_id: $cid})-[:HAS_DISPUTE_REASON]->(dr:DisputeReason)
-                RETURN dr.category AS category, dr.reason_code AS code
-                """,
-                {"cid": case_id},
-            ).single()
+        if not context.get("case"):
+            print(f"  [ERROR] Case '{case_id}' not found in Neo4j.")
+            return self._error_result(case_id, "Case not found in graph database")
 
-        driver.close()
-
-        if not result:
-            print(f"  [ERROR] No Case or DisputeReason found for {case_id}")
-            return self._error_result(case_id, "Case or DisputeReason not found in graph")
-
-        raw_reason = result["category"] or result["code"] or "UNKNOWN"
+        dr = context.get("dispute_reason", {})
+        raw_reason = dr.get("category") or dr.get("reason_code") or "UNKNOWN"
         canonical_reason = normalize_dispute_reason(raw_reason)
-        print(f"  Dispute reason: {raw_reason} -> {canonical_reason}")
-
-        # -- Step 2: Load dispute configuration --------------
-        print("\n[2/9] Loading dispute configuration...")
         config = get_dispute_config(raw_reason)
-        print(f"  Canonical reason: {config['canonical_reason']}")
-        print(f"  Evaluation questions: {len(config.get('evaluation_questions', []))}")
-        print(f"  Relevant fact types: {config.get('relevant_fact_types', [])}")
-        print(f"  Deterministic checks: {len(config.get('deterministic_checks', []))}")
 
-        # -- Step 3: Retrieve shared graph context (ONCE) ----
-        print("\n[3/9] Retrieving shared graph context...")
-        context = fetch_case_reasoning_context(case_id, config, self.db_name)
-
-        print(f"  Parties: {len(context['parties'])}")
-        print(f"  Orders: {len(context['orders'])}")
-        print(f"  Tracking: {len(context['tracking'])}")
-        print(f"  Evidence envelopes: {len(context['evidence'])}")
-        print(f"  Assertions: {len(context['assertions'])}")
-        print(f"  Facts: {len(context['facts'])}")
-        print(f"  Policy clauses: {len(context['policy_clauses'])}")
-        print(f"  Timeline events: {len(context['timeline_events'])}")
+        print(f"  Dispute Category: {raw_reason} (Canonical: {canonical_reason})")
+        print(f"  Graph Subgraph Context:")
+        print(f"    - Parties: {len(context['parties'])} ({[p['name'] for p in context['parties']]})")
+        print(f"    - Case Hubs (Entities): {len(context['entities'])} ({[e['entity_id'] for e in context['entities']]})")
+        print(f"    - Domain Bridges: {len(context['domain_bridges'])}")
+        print(f"    - Evidence Envelopes: {len(context['evidence'])}")
+        print(f"    - Assertions: {len(context['assertions'])}")
+        print(f"    - FactNodes: {len(context['facts'])}")
+        print(f"    - Policy Clauses: {len(context['policy_clauses'])}")
 
         if not context["evidence"] and not context["assertions"]:
             return self._error_result(case_id, "No evidence or assertions found in graph")
 
-        # -- Step 4: Generate structured findings ------------
-        print("\n[4/9] Generating structured findings from graph context...")
-        findings = generate_findings(context, config)
-        print(f"  Generated {len(findings)} findings:")
+        # ==========================================================
+        # STAGE 2: LLM Case Analyst (1 Constrained Call)
+        # ==========================================================
+        print("\n[2/4] Running LLM Case Analyst (Single Pydantic Call)...")
+        analysis: CaseAnalysis = analyze_case(context, config)
+        save_analysis(analysis)
 
-        by_type = {}
-        for f in findings:
-            t = f["finding_type"]
-            by_type[t] = by_type.get(t, 0) + 1
-        for t, count in by_type.items():
-            print(f"    - {t}: {count}")
+        # ==========================================================
+        # STAGE 3: Deterministic Verifier + Mathematical Weigher
+        # ==========================================================
+        print("\n[3/4] Running Deterministic Verifier & Objective Weighting...")
+        eval_result: DeterministicEvaluationResult = run_deterministic_evaluations(analysis)
 
-        # -- Step 5: Deterministic evaluation ----------------
-        print("\n[5/9] Running deterministic checks (Python logic)...")
-        det_evals = run_deterministic_checks(context, config, findings)
-        print(f"  Completed {len(det_evals)} deterministic evaluations:")
-        for de in det_evals:
-            print(f"    [{de['eval_id']}] {de['check_id']}: {de['result']} -- {de['effect']}")
+        # ==========================================================
+        # STAGE 4: LLM Verdict Narrative Synthesizer
+        # ==========================================================
+        print("\n[4/4] Synthesizing Compact Verdict & Explainable Narrative...")
+        verdict_pkg: VerdictPackage = synthesize_verdict(analysis, eval_result, config)
 
-        # -- Step 6: Semantic evaluation (LLM) ---------------
-        print("\n[6/9] Running semantic evaluations (LLM)...")
-        try:
-            sem_evals = run_semantic_evaluations(findings, config, context, deterministic_evals=det_evals)
-            print(f"  Completed {len(sem_evals)} semantic evaluations")
-            for se in sem_evals:
-                print(f"    [{se['eval_id']}] {se['finding_id']}: {se['effect']} "
-                      f"(relevance={se['relevance']}, confidence={se.get('confidence', 'N/A')})")
-        except Exception as e:
-            print(f"  [WARNING] Semantic evaluation failed: {e}")
-            print(f"  Proceeding with deterministic evaluations only.")
-            sem_evals = []
-
-        # -- Step 7: Conflict detection ----------------------
-        print("\n[7/9] Detecting conflicts...")
-        all_evals = det_evals + sem_evals
-        conflicts = detect_conflicts(findings, all_evals)
-        print(f"  Identified {len(conflicts)} conflicts:")
-        for c in conflicts:
-            print(f"    [{c['conflict_id']}] {c['proposition']}: {c['resolution']}")
-
-        # -- Step 8: Fair weighing ---------------------------
-        print("\n[8/9] Running fair weighing model...")
-        weighing_result = fair_weighing(all_evals, conflicts, findings=findings)
-        print(f"  Cardholder support: {weighing_result['cardholder_support']:.4f} "
-              f"({weighing_result['cardholder_pct']:.1%})")
-        print(f"  Merchant support: {weighing_result['merchant_support']:.4f} "
-              f"({weighing_result['merchant_pct']:.1%})")
-        print(f"  Net direction: {weighing_result['net_direction']}")
-
-        # -- Step 9: Decision synthesis ----------------------
-        print("\n[9/9] Synthesizing final decision...")
-        decision = synthesize_decision(
-            case_id=case_id,
-            config=config,
-            findings=findings,
-            deterministic_evals=det_evals,
-            semantic_evals=sem_evals,
-            conflicts=conflicts,
-            weighing=weighing_result,
-            context=context,
-        )
-
-        # Add execution metadata
+        # Convert to dictionary and attach execution metadata
+        decision_dict = verdict_pkg.model_dump(mode="json")
         elapsed = round(time.time() - start_time, 2)
-        decision["run_at"] = datetime.now(timezone.utc).isoformat()
-        decision["execution_time_seconds"] = elapsed
+        decision_dict["pipeline"] = "lean_hybrid_reasoning_v2"
+        decision_dict["execution_time_seconds"] = elapsed
+        decision_dict["run_at"] = datetime.now(timezone.utc).isoformat()
 
-        # -- Write results -----------------------------------
+        # ==========================================================
+        # Write Output
+        # ==========================================================
         result_path = self.output_dir / f"results_{case_id}.json"
         result_path.write_text(
-            json.dumps(decision, indent=2, default=str),
+            json.dumps(decision_dict, indent=2),
             encoding="utf-8",
         )
-        print(f"\n{'=' * 60}")
-        print(f"DECISION: {decision['verdict']}")
-        print(f"CONFIDENCE: {decision['confidence_score']:.4f} ({decision['confidence_band']})")
-        print(f"PRIMARY REASON: {decision.get('primary_reason', 'N/A')}")
-        print(f"Results written to: {result_path}")
-        print(f"Execution time: {elapsed}s")
-        print(f"{'=' * 60}\n")
 
-        return decision
+        # Console Summary
+        print(f"\n{'=' * 65}")
+        print(f"VERDICT: {verdict_pkg.verdict}")
+        print(f"CONFIDENCE: {verdict_pkg.confidence_score:.1%} ({verdict_pkg.confidence_band})")
+        print(f"PRIMARY REASON: {verdict_pkg.primary_reason}")
+        print(f"POLICY BASIS: {verdict_pkg.policy_basis}")
+        print(f"EVIDENCE BALANCE: Cardholder {eval_result.cardholder_pct:.1%} | Merchant {eval_result.merchant_pct:.1%}")
+        print(f"RESULTS SAVED: {result_path}")
+        print(f"EXECUTION TIME: {elapsed}s")
+        print(f"{'=' * 65}\n")
+
+        return decision_dict
 
     def _error_result(self, case_id: str, reason: str) -> Dict[str, Any]:
-        """Return an error/insufficient-evidence result."""
+        """Return an error / insufficient evidence fallback dictionary."""
         result = {
             "case_id": case_id,
             "verdict": "INSUFFICIENT_EVIDENCE",
             "confidence_score": 0.0,
             "confidence_band": "human_review_required",
             "primary_reason": reason,
-            "key_factors": [],
-            "counterarguments_considered": [],
-            "explanation": reason,
-            "findings": [],
-            "evaluations": {"deterministic": [], "semantic": []},
-            "conflicts": [],
-            "reasoning_trace": [reason],
-            "pipeline": "hybrid_reasoning_engine_v1",
+            "reasoning_statements": [],
+            "policy_basis": "N/A",
+            "counterarguments_addressed": [],
+            "executive_summary": reason,
+            "deterministic_metrics": {
+                "cardholder_score": 0.0,
+                "merchant_score": 0.0,
+                "cardholder_pct": "50.0%",
+                "merchant_pct": "50.0%",
+                "net_direction": "CONTESTED",
+                "date_verifications_count": 0,
+                "amount_verifications_count": 0,
+                "misstatements_detected": 0,
+            },
+            "pipeline": "lean_hybrid_reasoning_v2",
             "run_at": datetime.now(timezone.utc).isoformat(),
         }
         result_path = self.output_dir / f"results_{case_id}.json"
-        result_path.write_text(
-            json.dumps(result, indent=2, default=str),
-            encoding="utf-8",
-        )
+        result_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
         return result
 
 
+def _auto_detect_active_case_id(db_name: Optional[str] = None) -> str:
+    """Detect the single active case_id directly from Neo4j or canonical extractions."""
+    # 1. Check active Case node in Neo4j directly
+    try:
+        from worker.agents.graph_retrieval import _connect
+        driver = _connect()
+        db = db_name or os.getenv("NEO4J_DATABASE", "neo4j")
+        with driver.session(database=db) as session:
+            record = session.run("MATCH (c:Case) RETURN c.case_id AS cid LIMIT 1").single()
+            if record and record["cid"]:
+                driver.close()
+                return record["cid"]
+        driver.close()
+    except Exception:
+        pass
+
+    # 2. Fallback to canonical extraction JSON
+    canonical_file = Path("output/extractions/final_canonical_case_extractions.json")
+    if canonical_file.exists():
+        try:
+            data = json.loads(canonical_file.read_text(encoding="utf-8"))
+            cid = data.get("summary", {}).get("case_id")
+            if cid:
+                return cid
+        except Exception:
+            pass
+
+    return "UNKNOWN"
+
+
 # --------------------------------------------------------------
-# CLI ENTRY POINT
+# ENTRY POINT
 # --------------------------------------------------------------
 
 if __name__ == "__main__":
-    import sys
-    case = sys.argv[1] if len(sys.argv) > 1 else "DSP-2026-00187"
+    active_case = _auto_detect_active_case_id()
+    if active_case == "UNKNOWN":
+        print("\n[INFO] No active case found in Neo4j graph or canonical extractions. Pipeline not triggered.\n")
+        sys.exit(0)
     orchestrator = DisputeReasoningOrchestrator()
-    orchestrator.run(case)
+    orchestrator.run(active_case)
