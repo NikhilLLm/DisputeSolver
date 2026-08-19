@@ -1,0 +1,17 @@
+{
+  "case_id": "DSP-2026-00807",
+  "submitted_at": "2026-08-15T10:00:00Z",
+  "fields": {
+    "transaction_reference": "ORD-445566",
+    "transaction_date": "2026-08-05T14:00:00Z",
+    "transaction_amount": 25.0,
+    "currency": "USD",
+    "merchant_name": "GadgetWorld",
+    "dispute_reason_dropdown": "Item Not Received",
+    "customer_statement": "I ordered a wireless mouse 10 days ago and I have not received it. The merchant has not provided any tracking information despite multiple requests.",
+    "requested_resolution": "Full refund",
+    "supporting_documents_attached": [
+      "cardholder_order_confirmation.pdf"
+    ]
+  }
+}

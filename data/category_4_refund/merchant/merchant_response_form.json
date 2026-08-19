@@ -1,0 +1,15 @@
+{
+  "case_id": "DSP-2026-00504",
+  "submitted_at": "2026-08-03T11:00:00Z",
+  "fields": {
+    "merchant_id": "MID-URBAN-771",
+    "response_decision": "accept",
+    "reason_code_acknowledged": "13.6",
+    "merchant_notes": "We acknowledge the refund is owed. Our records show the refund was successfully processed on July 25. The customer should see it on their statement shortly.",
+    "requested_outcome": "accept dispute / refund processed",
+    "supporting_documents_attached": [
+      "merchant_refund_confirmation.pdf",
+      "merchant_processor_log.pdf"
+    ]
+  }
+}

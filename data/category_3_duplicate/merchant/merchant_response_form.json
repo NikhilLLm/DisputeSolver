@@ -1,0 +1,15 @@
+{
+  "case_id": "DSP-2026-00403",
+  "submitted_at": "2026-08-14T15:00:00Z",
+  "fields": {
+    "merchant_id": "MID-COFFEE-112",
+    "response_decision": "contest",
+    "reason_code_acknowledged": "12.6.1",
+    "merchant_notes": "These are two distinct transactions. The customer placed two separate orders 45 minutes apart. Each order has a unique session ID and unique item fulfillment record. This was not a system error.",
+    "requested_outcome": "deny refund",
+    "supporting_documents_attached": [
+      "merchant_transaction_comparison.pdf",
+      "merchant_session_logs.pdf"
+    ]
+  }
+}

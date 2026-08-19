@@ -1,0 +1,25 @@
+{
+  "form_type": "merchant_dispute_response_form",
+  "case_id": "DSP-2026-00187",
+  "submitted_at": "2026-07-20T13:05:00Z",
+  "fields": {
+    "merchant_id": "MER-NOVAMART-0042",
+    "response_decision": "contest",
+    "reason_code_acknowledged": "Item Not Received (Visa 13.1)",
+    "compelling_evidence_category_selected": "Proof of Delivery",
+    "merchant_notes": "Order shipped same week of purchase. Carrier tracking confirms delivery to the address on file within the promised window. Delivery was contactless per account delivery preferences, so no signature was collected. Customer's non-receipt report was filed 9 days after the marked delivery date.",
+    "requested_outcome": "Uphold charge / deny refund",
+    "evidence_checklist": {
+      "shipping_tracking_provided": true,
+      "delivery_confirmation_provided": true,
+      "terms_of_service_provided": true,
+      "customer_communication_log_provided": false,
+      "invoice_provided": false
+    },
+    "supporting_documents_attached": [
+      "merchant_tracking_report.pdf",
+      "merchant_delivery_photo.png",
+      "merchant_terms_of_service_excerpt.pdf"
+    ]
+  }
+}

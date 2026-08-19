@@ -1,0 +1,15 @@
+{
+  "case_id": "DSP-2026-00706",
+  "submitted_at": "2026-08-16T11:00:00Z",
+  "fields": {
+    "merchant_id": "MID-GOURMET-883",
+    "response_decision": "contest",
+    "reason_code_acknowledged": "12.2",
+    "merchant_notes": "The $85 charge is correct. It includes the base price of $55 plus a mandatory $30 'Chef's Table' service fee that is applied to all weekend bookings.",
+    "requested_outcome": "deny refund",
+    "supporting_documents_attached": [
+      "merchant_pos_system_log.pdf",
+      "merchant_pricing_breakdown.pdf"
+    ]
+  }
+}

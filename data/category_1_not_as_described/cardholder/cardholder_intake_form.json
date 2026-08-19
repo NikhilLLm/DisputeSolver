@@ -1,0 +1,21 @@
+{
+  "case_id": "DSP-2026-00201",
+  "submitted_at": "2026-07-25T09:00:00Z",
+  "fields": {
+    "transaction_reference": "ORD-112233445",
+    "transaction_date": "2026-07-15T10:30:00Z",
+    "transaction_amount": 199.99,
+    "currency": "USD",
+    "merchant_name": "TechGadgets Inc.",
+    "dispute_reason_dropdown": "Not as Described",
+    "customer_statement": "I ordered the ProFit Wireless Headphones in Black, but I received a much cheaper 'Standard' model in White. The box was even mislabeled. I tried to contact the merchant but they told me all sales are final for 'electronics', which contradicts their website.",
+    "requested_resolution": "Full refund",
+    "attempted_contact_with_merchant": true,
+    "attempted_contact_date": "2026-07-22",
+    "supporting_documents_attached": [
+      "cardholder_received_item_photo.png",
+      "cardholder_advertisement_screenshot.png",
+      "cardholder_communication_log.pdf"
+    ]
+  }
+}

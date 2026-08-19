@@ -1,0 +1,17 @@
+{
+  "case_id": "DSP-2026-00605",
+  "submitted_at": "2026-08-05T10:00:00Z",
+  "fields": {
+    "transaction_reference": "SUB-887766",
+    "transaction_date": "2026-08-01T00:00:00Z",
+    "transaction_amount": 19.99,
+    "currency": "USD",
+    "merchant_name": "StreamMax",
+    "dispute_reason_dropdown": "Cancelled Recurring Transaction",
+    "customer_statement": "I cancelled my StreamMax subscription on July 28. I received a confirmation email. However, I was still charged $19.99 on August 1. I have not used the service since I cancelled.",
+    "requested_resolution": "Full refund",
+    "supporting_documents_attached": [
+      "cardholder_cancellation_confirmation.pdf"
+    ]
+  }
+}

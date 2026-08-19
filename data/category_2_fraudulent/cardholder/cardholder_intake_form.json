@@ -1,0 +1,18 @@
+{
+  "case_id": "DSP-2026-00302",
+  "submitted_at": "2026-08-03T10:00:00Z",
+  "fields": {
+    "transaction_reference": "ORD-998877665",
+    "transaction_date": "2026-08-01T23:15:00Z",
+    "transaction_amount": 850.0,
+    "currency": "USD",
+    "merchant_name": "FashionHub Online",
+    "dispute_reason_dropdown": "Fraudulent",
+    "customer_statement": "I did not authorize this charge of $850. My physical wallet was stolen on July 31, and I reported my cards as compromised on August 2 when I saw the pending transactions. This purchase was made in a city I have not visited.",
+    "requested_resolution": "Full refund",
+    "supporting_documents_attached": [
+      "cardholder_unauthorized_statement.pdf",
+      "cardholder_police_report_excerpt.pdf"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "case_id": "DSP-2026-00605",
+  "submitted_at": "2026-08-07T14:00:00Z",
+  "fields": {
+    "merchant_id": "MID-STREAM-009",
+    "response_decision": "contest",
+    "reason_code_acknowledged": "13.2",
+    "merchant_notes": "The customer did initiate a cancellation, but our logs show continued usage of the service on August 2nd and 3rd. According to our terms, usage after the billing date constitutes a renewal of the subscription for the next month.",
+    "requested_outcome": "deny refund",
+    "supporting_documents_attached": [
+      "merchant_subscription_terms.pdf",
+      "merchant_usage_logs.pdf"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "case_id": "DSP-2026-00706",
+  "submitted_at": "2026-08-14T09:00:00Z",
+  "fields": {
+    "transaction_reference": "ORD-332211",
+    "transaction_date": "2026-08-12T19:30:00Z",
+    "transaction_amount": 85.0,
+    "currency": "USD",
+    "merchant_name": "GourmetBistro",
+    "dispute_reason_dropdown": "Incorrect Transaction Amount",
+    "customer_statement": "I was charged $85 for a dinner that cost $55. My receipt clearly shows $55. The merchant seems to have added an unauthorized $30 charge.",
+    "requested_resolution": "Refund of $30 discrepancy",
+    "supporting_documents_attached": [
+      "cardholder_order_receipt.pdf"
+    ]
+  }
+}

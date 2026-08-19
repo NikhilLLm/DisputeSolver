@@ -1,0 +1,16 @@
+{
+  "case_id": "DSP-2026-00201",
+  "submitted_at": "2026-07-28T14:00:00Z",
+  "fields": {
+    "merchant_id": "MID-TECH-998",
+    "response_decision": "contest",
+    "reason_code_acknowledged": "13.3",
+    "merchant_notes": "The customer received the correct item as per our shipping records. Our quality check log confirms the Black Pro model was packed. Furthermore, the customer is outside our 5-day electronics return window.",
+    "requested_outcome": "deny refund",
+    "supporting_documents_attached": [
+      "merchant_product_listing.pdf",
+      "merchant_return_policy.pdf",
+      "merchant_quality_check_log.pdf"
+    ]
+  }
+}

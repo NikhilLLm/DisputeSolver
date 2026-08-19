@@ -1,0 +1,17 @@
+{
+  "case_id": "DSP-2026-00403",
+  "submitted_at": "2026-08-12T11:00:00Z",
+  "fields": {
+    "transaction_reference": "ORD-554433222",
+    "transaction_date": "2026-08-10T09:45:00Z",
+    "transaction_amount": 45.0,
+    "currency": "USD",
+    "merchant_name": "CoffeeExpress",
+    "dispute_reason_dropdown": "Duplicate Charge",
+    "customer_statement": "I was charged twice for the same order of coffee beans. I only intended to buy one bag. I see two charges of $45 on my statement on the same day.",
+    "requested_resolution": "Full refund of the second charge",
+    "supporting_documents_attached": [
+      "cardholder_bank_statement.pdf"
+    ]
+  }
+}

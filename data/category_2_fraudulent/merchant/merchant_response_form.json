@@ -1,0 +1,16 @@
+{
+  "case_id": "DSP-2026-00302",
+  "submitted_at": "2026-08-05T16:00:00Z",
+  "fields": {
+    "merchant_id": "MID-FASHION-442",
+    "response_decision": "contest",
+    "reason_code_acknowledged": "10.4",
+    "merchant_notes": "The transaction was processed with full security verification. AVS matched the billing address, CVV was verified, and 3D Secure was successfully completed by the user. The IP address used is consistent with the customer's billing state.",
+    "requested_outcome": "deny refund",
+    "supporting_documents_attached": [
+      "merchant_transaction_metadata.pdf",
+      "merchant_fraud_risk_score.pdf",
+      "merchant_device_fingerprint.pdf"
+    ]
+  }
+}

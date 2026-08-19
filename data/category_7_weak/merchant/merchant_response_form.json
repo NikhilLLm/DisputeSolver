@@ -1,0 +1,14 @@
+{
+  "case_id": "DSP-2026-00807",
+  "submitted_at": "2026-08-18T14:00:00Z",
+  "fields": {
+    "merchant_id": "MID-GADGET-221",
+    "response_decision": "contest",
+    "reason_code_acknowledged": "13.1",
+    "merchant_notes": "We shipped the item as per our internal records. We do not have a tracking number available for this low-value shipment.",
+    "requested_outcome": "deny refund",
+    "supporting_documents_attached": [
+      "merchant_internal_order_status.pdf"
+    ]
+  }
+}

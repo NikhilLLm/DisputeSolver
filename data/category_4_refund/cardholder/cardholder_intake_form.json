@@ -1,0 +1,18 @@
+{
+  "case_id": "DSP-2026-00504",
+  "submitted_at": "2026-08-01T09:00:00Z",
+  "fields": {
+    "transaction_reference": "ORD-123456789",
+    "transaction_date": "2026-07-10T12:00:00Z",
+    "transaction_amount": 65.0,
+    "currency": "USD",
+    "merchant_name": "UrbanWear",
+    "dispute_reason_dropdown": "Credit Not Processed",
+    "customer_statement": "I returned the dress on July 20 and the merchant agreed via email to refund me. It has been over 10 days and I still don't see the credit on my card.",
+    "requested_resolution": "Full refund",
+    "supporting_documents_attached": [
+      "cardholder_refund_agreement_email.pdf",
+      "cardholder_return_receipt.pdf"
+    ]
+  }
+}

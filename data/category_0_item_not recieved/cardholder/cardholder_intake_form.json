@@ -1,0 +1,22 @@
+{
+  "form_type": "cardholder_dispute_intake_form",
+  "case_id": "DSP-2026-00187",
+  "submitted_at": "2026-07-18T09:14:00Z",
+  "fields": {
+    "transaction_reference": "ORD-987654321",
+    "transaction_date": "2026-07-05",
+    "transaction_amount": 449.99,
+    "currency": "USD",
+    "merchant_name": "NovaMart",
+    "dispute_reason_dropdown": "Item Not Received",
+    "customer_statement": "I ordered a espresso machine from NovaMart on July 5 for $449.99. The estimated delivery window shown at checkout was July 8-10. I never received the package. I checked with my building's front desk and my neighbors, and nobody signed for or saw a delivery. I emailed the merchant on July 12 and July 15 asking for an update and did not get a helpful response. I would like a full refund since I never received the item.",
+    "requested_resolution": "Full refund",
+    "attempted_contact_with_merchant": true,
+    "attempted_contact_date": "2026-07-12",
+    "supporting_documents_attached": [
+      "cardholder_order_receipt.pdf",
+      "cardholder_email_screenshot.png"
+    ],
+    "declaration_accuracy_checkbox": true
+  }
+}
