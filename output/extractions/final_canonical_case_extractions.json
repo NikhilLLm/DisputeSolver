@@ -1,0 +1,549 @@
+{
+  "title": "Canonical Case Evidence Extractions",
+  "case_id": "DSP-2026-00201",
+  "generated_at": "2026-08-18T06:46:53Z",
+  "summary": {
+    "source_data_dir": "data\\category_1_not_as_described",
+    "total_documents_processed": 8,
+    "structured_form_documents": 2,
+    "unstructured_documents": 6,
+    "unique_entities_discovered": {
+      "case_ids": [
+        "DSP-2026-00201"
+      ],
+      "order_ids": [
+        "ORD-112233445"
+      ],
+      "tracking_numbers": [],
+      "merchants": [
+        "TechGadgets Inc."
+      ],
+      "customers": [
+        "Alice Johnson"
+      ],
+      "reports": [
+        "DSP-2026-00201"
+      ],
+      "items": [
+        "ProFit Wireless Headphones",
+        "Black Pro model",
+        "White Standard model"
+      ],
+      "ordered_items": [
+        "ProFit Wireless Headphones",
+        "Black Pro model"
+      ],
+      "received_items": [
+        "White Standard model"
+      ]
+    }
+  },
+  "extractions": [
+    {
+      "meta": {
+        "case_id": "DSP-2026-00201",
+        "document_id": "doc-form-cardholder_intake_fo-1787035549",
+        "file_name": "cardholder_intake_form.json",
+        "owner": "cardholder",
+        "evidence_type": "DISPUTE_FORM",
+        "extraction_method": "deterministic_regex_form_parser",
+        "extracted_at": "2026-07-25T09:00:00Z",
+        "confidence": 1.0
+      },
+      "payload": {
+        "merchant_name": "TechGadgets Inc.",
+        "customer_name": "Cardholder",
+        "dispute_reason": "Not as Described",
+        "canonical_dispute_reason": "NOT_AS_DESCRIBED",
+        "claim": "I ordered the ProFit Wireless Headphones in Black, but I received a much cheaper 'Standard' model in White. The box was even mislabeled. I tried to contact the merchant but they told me all sales are final for 'electronics', which contradicts their website.",
+        "requested_resolution": "Full refund",
+        "disputed_amount": 199.99,
+        "currency": "USD",
+        "order_id": "ORD-112233445",
+        "canonical_merchant_id": "MER-TECHGADGETS-INC"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "ast-form-035549-1",
+            "assertion_text": "I ordered the ProFit Wireless Headphones in Black, but I received a much cheaper 'Standard' model in White.",
+            "subject_entity": "Item"
+          },
+          {
+            "claim_id": "ast-form-035549-2",
+            "assertion_text": "The box was even mislabeled.",
+            "subject_entity": "ORD-112233445"
+          },
+          {
+            "claim_id": "ast-form-035549-3",
+            "assertion_text": "I tried to contact the merchant but they told me all sales are final for 'electronics', which contradicts their website.",
+            "subject_entity": "ORD-112233445"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Merchant",
+            "entity_id": "TechGadgets Inc.",
+            "name": "TechGadgets Inc."
+          },
+          {
+            "entity_type": "Order",
+            "entity_id": "ORD-112233445",
+            "name": "ORD-112233445"
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00201",
+        "document_id": "doc-form-merchant_response_fo-1787035549",
+        "file_name": "merchant_response_form.json",
+        "owner": "merchant",
+        "evidence_type": "DISPUTE_FORM",
+        "extraction_method": "deterministic_regex_form_parser",
+        "extracted_at": "2026-07-28T14:00:00Z",
+        "confidence": 1.0
+      },
+      "payload": {
+        "merchant_name": "TechGadgets Inc.",
+        "merchant_id": "TechGadgets Inc.",
+        "customer_name": "Cardholder",
+        "dispute_reason": "13.3",
+        "canonical_dispute_reason": "NOT_AS_DESCRIBED",
+        "claim": "The customer received the correct item as per our shipping records. Our quality check log confirms the Black Pro model was packed. Furthermore, the customer is outside our 5-day electronics return window.",
+        "requested_resolution": "deny refund",
+        "currency": "USD",
+        "canonical_merchant_id": "MER-TECHGADGETS-INC"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "ast-form-035549-1",
+            "assertion_text": "The customer received the correct item as per our shipping records.",
+            "subject_entity": "Item"
+          },
+          {
+            "claim_id": "ast-form-035549-2",
+            "assertion_text": "Our quality check log confirms the Black Pro model was packed.",
+            "subject_entity": "Item"
+          },
+          {
+            "claim_id": "ast-form-035549-3",
+            "assertion_text": "Furthermore, the customer is outside our 5-day electronics return window.",
+            "subject_entity": "Policy"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Merchant",
+            "entity_id": "TechGadgets Inc.",
+            "name": "TechGadgets Inc."
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00201",
+        "document_id": "doc-cardholder_advertise-1787035550",
+        "file_name": "cardholder_advertisement_screenshot.png",
+        "owner": "cardholder",
+        "evidence_type": "COMMUNICATION_LOG",
+        "extracted_at": "2026-08-18T06:45:53Z",
+        "confidence": 0.7,
+        "processed_by": "ocr_image_extractor"
+      },
+      "payload": {
+        "messages": [],
+        "canonical_merchant_id": "MER-TECHGADGETS-INC"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "claim-1",
+            "assertion_text": "The merchant is TechGadgetsInc.",
+            "subject_entity": "TechGadgetsInc"
+          },
+          {
+            "claim_id": "claim-2",
+            "assertion_text": "The product is ProFit Wireless Headphones.",
+            "subject_entity": "ProFit Wireless Headphones"
+          },
+          {
+            "claim_id": "claim-3",
+            "assertion_text": "The selected color is Black.",
+            "subject_entity": "ProFit Wireless Headphones"
+          },
+          {
+            "claim_id": "claim-4",
+            "assertion_text": "The price is $1999.",
+            "subject_entity": "ProFit Wireless Headphones"
+          },
+          {
+            "claim_id": "claim-5",
+            "assertion_text": "The product features Noise Cancelling.",
+            "subject_entity": "ProFit Wireless Headphones"
+          },
+          {
+            "claim_id": "claim-6",
+            "assertion_text": "The product features Metal Finish.",
+            "subject_entity": "ProFit Wireless Headphones"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Merchant",
+            "entity_id": "TechGadgets Inc.",
+            "name": "TechGadgets Inc."
+          },
+          {
+            "entity_type": "OrderedItem",
+            "entity_id": "ProFit Wireless Headphones",
+            "name": "ProFit Wireless Headphones"
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00201",
+        "document_id": "doc-cardholder_communica-1787035554",
+        "file_name": "cardholder_communication_log.pdf",
+        "owner": "cardholder",
+        "evidence_type": "COMMUNICATION_LOG",
+        "extracted_at": "2026-08-18T06:45:58Z",
+        "confidence": 0.85,
+        "processed_by": "ocr_pdf_txt_extractor"
+      },
+      "payload": {
+        "messages": [
+          {
+            "sender": "Alice Johnson",
+            "recipient": "TechGadgets Inc. Support",
+            "timestamp": "2026-07-22T00:00:00",
+            "body": "Hi, I received order ORD-112233445 but it's the wrong model and color. I ordered the Black Pro model and got White Standard. Please help."
+          },
+          {
+            "sender": "TechGadgets Inc. Support",
+            "recipient": "Alice Johnson",
+            "timestamp": "2026-07-23T00:00:00",
+            "body": "Hi Alice, we have reviewed your order. Our policy states that all electronics are final sale. We cannot offer a return or exchange at this time."
+          }
+        ],
+        "canonical_merchant_id": "MER-TECHGADGETS-INC"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "claim-1",
+            "assertion_text": "Alice Johnson received order ORD-112233445.",
+            "subject_entity": "ORD-112233445"
+          },
+          {
+            "claim_id": "claim-2",
+            "assertion_text": "The order received was the wrong model and color.",
+            "subject_entity": "ORD-112233445"
+          },
+          {
+            "claim_id": "claim-3",
+            "assertion_text": "Alice Johnson ordered the Black Pro model.",
+            "subject_entity": "ORD-112233445"
+          },
+          {
+            "claim_id": "claim-4",
+            "assertion_text": "Alice Johnson got the White Standard model.",
+            "subject_entity": "ORD-112233445"
+          },
+          {
+            "claim_id": "claim-5",
+            "assertion_text": "TechGadgets Inc. has a policy that all electronics are final sale.",
+            "subject_entity": "TechGadgets Inc."
+          },
+          {
+            "claim_id": "claim-6",
+            "assertion_text": "TechGadgets Inc. cannot offer a return or exchange for this order.",
+            "subject_entity": "TechGadgets Inc."
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Order",
+            "entity_id": "ORD-112233445",
+            "name": "ORD-112233445"
+          },
+          {
+            "entity_type": "Merchant",
+            "entity_id": "TechGadgets Inc.",
+            "name": "TechGadgets Inc."
+          },
+          {
+            "entity_type": "Customer",
+            "entity_id": "Alice Johnson",
+            "name": "Alice Johnson"
+          },
+          {
+            "entity_type": "OrderedItem",
+            "entity_id": "Black Pro model",
+            "name": "Black Pro model"
+          },
+          {
+            "entity_type": "ReceivedItem",
+            "entity_id": "White Standard model",
+            "name": "White Standard model"
+          },
+          {
+            "entity_type": "PolicyClause",
+            "entity_id": "All electronics are final sale",
+            "name": "All electronics are final sale"
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00201",
+        "document_id": "doc-cardholder_received_-1787035560",
+        "file_name": "cardholder_received_item_photo.png",
+        "owner": "cardholder",
+        "evidence_type": "DELIVERY_PROOF",
+        "extracted_at": "2026-08-18T06:46:03Z",
+        "confidence": 0.7,
+        "processed_by": "ocr_image_extractor"
+      },
+      "payload": {
+        "canonical_merchant_id": "MER-TECHGADGETS-INC"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "claim-1",
+            "assertion_text": "This is a photo of the received item.",
+            "subject_entity": "White Standard Headphones"
+          },
+          {
+            "claim_id": "claim-2",
+            "assertion_text": "Case ID is DSP-2026-00201.",
+            "subject_entity": "DSP-2026-00201"
+          },
+          {
+            "claim_id": "claim-3",
+            "assertion_text": "The received item is White Standard Headphones.",
+            "subject_entity": "White Standard Headphones"
+          },
+          {
+            "claim_id": "claim-4",
+            "assertion_text": "The condition is mismatched with the order.",
+            "subject_entity": "White Standard Headphones"
+          },
+          {
+            "claim_id": "claim-5",
+            "assertion_text": "The received headphones are white plastic, not the black metal Pro model ordered.",
+            "subject_entity": "White Standard Headphones"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Report",
+            "entity_id": "DSP-2026-00201",
+            "name": "DSP-2026-00201"
+          },
+          {
+            "entity_type": "ReceivedItem",
+            "entity_id": "White Standard Headphones",
+            "name": "White Standard model"
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00201",
+        "document_id": "doc-merchant_product_lis-1787035564",
+        "file_name": "merchant_product_listing.pdf",
+        "owner": "merchant",
+        "evidence_type": "PURCHASE_RECORD",
+        "extracted_at": "2026-08-18T06:46:17Z",
+        "confidence": 0.85,
+        "processed_by": "ocr_pdf_txt_extractor"
+      },
+      "payload": {
+        "items": [
+          {
+            "name": "ProFit Wireless Headphones",
+            "sku": "PF-WRLS-BLK",
+            "price": 199.99
+          }
+        ],
+        "canonical_merchant_id": "MER-TECHGADGETS-INC"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "claim-1",
+            "assertion_text": "The product listing is titled \"ProFit Wireless\".",
+            "subject_entity": "PF-WRLS-BLK"
+          },
+          {
+            "claim_id": "claim-2",
+            "assertion_text": "The SKU is PF-WRLS-BLK.",
+            "subject_entity": "PF-WRLS-BLK"
+          },
+          {
+            "claim_id": "claim-3",
+            "assertion_text": "The product name is ProFit Wireless Headphones.",
+            "subject_entity": "PF-WRLS-BLK"
+          },
+          {
+            "claim_id": "claim-4",
+            "assertion_text": "The description states it is High-end audio with noise cancellation.",
+            "subject_entity": "PF-WRLS-BLK"
+          },
+          {
+            "claim_id": "claim-5",
+            "assertion_text": "The price is $199.99.",
+            "subject_entity": "PF-WRLS-BLK"
+          },
+          {
+            "claim_id": "claim-6",
+            "assertion_text": "The weight is 0.8 lbs.",
+            "subject_entity": "PF-WRLS-BLK"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Item",
+            "entity_id": "PF-WRLS-BLK",
+            "name": "ProFit Wireless Headphones"
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00201",
+        "document_id": "doc-merchant_quality_che-1787035579",
+        "file_name": "merchant_quality_check_log.pdf",
+        "owner": "merchant",
+        "evidence_type": "ORDER_STATUS_REPORT",
+        "extracted_at": "2026-08-18T06:46:36Z",
+        "confidence": 0.85,
+        "processed_by": "ocr_pdf_txt_extractor"
+      },
+      "payload": {
+        "order_id": "ORD-112233445",
+        "inspection_id": "QC-88",
+        "notes": "Station: Packing-04; Timestamp: 2026-07-16T08:45:00; Item Verified: ProFit Wireless - Black; Status: PASSED",
+        "canonical_merchant_id": "MER-TECHGADGETS-INC"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "claim-1",
+            "assertion_text": "Order ID is ORD-112233445.",
+            "subject_entity": "ORD-112233445"
+          },
+          {
+            "claim_id": "claim-2",
+            "assertion_text": "QC station is Packing-04.",
+            "subject_entity": "Packing-04"
+          },
+          {
+            "claim_id": "claim-3",
+            "assertion_text": "QC check timestamp is 2026-07-16 08:45 AM.",
+            "subject_entity": "2026-07-16T08:45:00"
+          },
+          {
+            "claim_id": "claim-4",
+            "assertion_text": "Item verified is ProFit Wireless - Black.",
+            "subject_entity": "ProFit Wireless - Black"
+          },
+          {
+            "claim_id": "claim-5",
+            "assertion_text": "Verification status is PASSED.",
+            "subject_entity": "PASSED"
+          },
+          {
+            "claim_id": "claim-6",
+            "assertion_text": "Inspector ID is QC-88.",
+            "subject_entity": "QC-88"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Order",
+            "entity_id": "ORD-112233445",
+            "name": "ORD-112233445"
+          },
+          {
+            "entity_type": "Inspector",
+            "entity_id": "QC-88",
+            "name": "QC-88"
+          },
+          {
+            "entity_type": "OrderedItem",
+            "entity_id": "ProFit Wireless - Black",
+            "name": "ProFit Wireless Headphones"
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00201",
+        "document_id": "doc-merchant_return_poli-1787035597",
+        "file_name": "merchant_return_policy.pdf",
+        "owner": "merchant",
+        "evidence_type": "MERCHANT_POLICY",
+        "extracted_at": "2026-08-18T06:46:53Z",
+        "confidence": 0.85,
+        "processed_by": "ocr_pdf_txt_extractor"
+      },
+      "payload": {
+        "policy_name": "TechGadgets Return Policy",
+        "refund_window_days": 30,
+        "clauses": [
+          {
+            "clause_id": "1",
+            "text": "Items can be returned within 30 days."
+          },
+          {
+            "clause_id": "2",
+            "text": "All high-value electronics (over $150) must be reported for discrepancies within 5 business days of delivery."
+          },
+          {
+            "clause_id": "3",
+            "text": "Clearance items are final sale."
+          }
+        ],
+        "canonical_merchant_id": "MER-TECHGADGETS-INC"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "claim-1",
+            "assertion_text": "Items can be returned within 30 days.",
+            "subject_entity": "TechGadgets"
+          },
+          {
+            "claim_id": "claim-2",
+            "assertion_text": "All high-value electronics (over $150) must be reported for discrepancies within 5 business days of delivery.",
+            "subject_entity": "TechGadgets"
+          },
+          {
+            "claim_id": "claim-3",
+            "assertion_text": "Clearance items are final sale.",
+            "subject_entity": "TechGadgets"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Merchant",
+            "entity_id": "TechGadgets Inc.",
+            "name": "TechGadgets Inc."
+          }
+        ]
+      }
+    }
+  ]
+}

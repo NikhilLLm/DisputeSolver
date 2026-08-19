@@ -1,0 +1,113 @@
+{
+  "case_id": "DSP-2026-00201",
+  "canonical_reason": "NOT_AS_DESCRIBED",
+  "case_hubs": [
+    {
+      "hub_label": "Order",
+      "canonical_id": "ORD-112233445",
+      "display_name": "ORD-112233445",
+      "source_entity_type": "Order"
+    },
+    {
+      "hub_label": "Merchant",
+      "canonical_id": "TechGadgets Inc.",
+      "display_name": "TechGadgets Inc.",
+      "source_entity_type": "Merchant"
+    },
+    {
+      "hub_label": "Customer",
+      "canonical_id": "Alice Johnson",
+      "display_name": "Alice Johnson",
+      "source_entity_type": "Customer"
+    },
+    {
+      "hub_label": "OrderedItem",
+      "canonical_id": "ProFit Wireless Headphones",
+      "display_name": "ProFit Wireless Headphones",
+      "source_entity_type": "OrderedItem"
+    },
+    {
+      "hub_label": "ReceivedItem",
+      "canonical_id": "White Standard model",
+      "display_name": "White Standard model",
+      "source_entity_type": "ReceivedItem"
+    }
+  ],
+  "entity_alias_map": [
+    {
+      "canonical_id": "ProFit Wireless Headphones",
+      "aliases": [
+        "Black Pro model",
+        "ProFit Wireless - Black",
+        "PF-WRLS-BLK"
+      ]
+    },
+    {
+      "canonical_id": "White Standard model",
+      "aliases": [
+        "White Standard Headphones"
+      ]
+    }
+  ],
+  "domain_bridges": [
+    {
+      "source_canonical_id": "ORD-112233445",
+      "target_canonical_id": "ProFit Wireless Headphones",
+      "relationship_type": "EXPECTS_ITEM"
+    },
+    {
+      "source_canonical_id": "ORD-112233445",
+      "target_canonical_id": "White Standard model",
+      "relationship_type": "RECEIVED_AS"
+    },
+    {
+      "source_canonical_id": "ORD-112233445",
+      "target_canonical_id": "TechGadgets Inc.",
+      "relationship_type": "PURCHASED_FROM"
+    }
+  ],
+  "evidence_wirings": [
+    {
+      "document_id": "doc-form-cardholder_intake_fo-1787035549",
+      "target_canonical_id": "ORD-112233445",
+      "relationship_type": "ABOUT"
+    },
+    {
+      "document_id": "doc-form-merchant_response_fo-1787035549",
+      "target_canonical_id": "TechGadgets Inc.",
+      "relationship_type": "ABOUT"
+    },
+    {
+      "document_id": "doc-cardholder_advertise-1787035550",
+      "target_canonical_id": "ProFit Wireless Headphones",
+      "relationship_type": "ABOUT"
+    },
+    {
+      "document_id": "doc-cardholder_communica-1787035554",
+      "target_canonical_id": "ORD-112233445",
+      "relationship_type": "ABOUT"
+    },
+    {
+      "document_id": "doc-cardholder_received_-1787035560",
+      "target_canonical_id": "White Standard model",
+      "relationship_type": "PROVES_DELIVERY"
+    },
+    {
+      "document_id": "doc-merchant_product_lis-1787035564",
+      "target_canonical_id": "ProFit Wireless Headphones",
+      "relationship_type": "ABOUT"
+    },
+    {
+      "document_id": "doc-merchant_quality_che-1787035579",
+      "target_canonical_id": "ORD-112233445",
+      "relationship_type": "ABOUT"
+    },
+    {
+      "document_id": "doc-merchant_return_poli-1787035597",
+      "target_canonical_id": "TechGadgets Inc.",
+      "relationship_type": "ABOUT"
+    }
+  ],
+  "_generated_at": "20260818T092206Z",
+  "_source_json": "output\\extractions\\final_canonical_case_extractions.json"
+}
