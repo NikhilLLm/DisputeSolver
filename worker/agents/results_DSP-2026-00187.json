@@ -1,0 +1,887 @@
+{
+  "executive_summary": {
+    "case_id": "DSP-2026-00187",
+    "verdict": "MERCHANT",
+    "confidence": "75.4% (moderate_confidence)",
+    "primary_decision_rationale": "The outcome was reached in favor of the merchant due to the presence of delivery proof and carrier tracking confirming delivery status as 'Delivered', which outweighed the cardholder's claim of non-receipt.",
+    "narrative_summary": "The cardholder claimed not to have received the item (SE006), but the merchant provided delivery proof (DE005) and carrier tracking confirmed delivery (DE001, PE001). Objective checks showed that the cardholder reported the non-receipt claim within the policy window (DE002, PE002), but the merchant's evidence of delivery was stronger (CONF-delivery_verification). The conflict regarding delivery verification was resolved in favor of the merchant due to the strength of their evidence (CONF-delivery_verification), and policy conditions applied, including the merchant not being liable for packages confirmed as delivered by the carrier's tracking system that are lost, stolen, or misplaced after delivery (PE004). Overall, the evaluations and findings, such as SE014 and PE001, supported the merchant's claim, leading to the outcome in their favor.",
+    "decisive_supporting_evidence": [
+      {
+        "finding_id": "",
+        "source_tier": "TIER_1_TELEMETRY",
+        "statement": "Carrier tracking confirms delivery status as 'Delivered'.",
+        "evidence_id": [],
+        "impact": "SUPPORTS_MERCHANT"
+      },
+      {
+        "finding_id": "",
+        "source_tier": "TIER_1_TELEMETRY",
+        "statement": "Delivery proof exists. No signature collected (contactless delivery).",
+        "evidence_id": [],
+        "impact": "SUPPORTS_MERCHANT"
+      },
+      {
+        "finding_id": "F014",
+        "source_tier": "TIER_1_TELEMETRY",
+        "statement": "Delivery proof for tracking FTL9284710556: delivered 2026-07-09T15:42:11, no signature collected",
+        "evidence_id": [
+          "ev-doc-merchant_delivery_ph-1786215552"
+        ],
+        "impact": "SUPPORTS_MERCHANT"
+      },
+      {
+        "finding_id": "F022",
+        "source_tier": "TIER_1_TELEMETRY",
+        "statement": "Tracking event: Delivered at 412 Maple Court, Springfield, IL on 2026-07-09T15:42:00",
+        "evidence_id": [
+          "ev-doc-merchant_tracking_re-1786215559"
+        ],
+        "impact": "SUPPORTS_MERCHANT"
+      }
+    ],
+    "contested_points_and_counterarguments": [
+      "[DE002->] Cardholder reported 2 day(s) after delivery (delivery: 2026-07-09, report: 2026-07-12). Policy window is 5 days. Within window.",
+      "[SE006->F006] The finding directly supports the cardholder's claim of not receiving the package, as it is an assertion of non-receipt."
+    ],
+    "evidence_balance": {
+      "merchant_weight": "75.4%",
+      "cardholder_weight": "24.6%",
+      "net_direction": "MERCHANT"
+    }
+  },
+  "case_id": "DSP-2026-00187",
+  "verdict": "MERCHANT",
+  "confidence_score": 0.7537,
+  "confidence_band": "moderate_confidence",
+  "primary_reason": "The outcome was reached in favor of the merchant due to the presence of delivery proof and carrier tracking confirming delivery status as 'Delivered', which outweighed the cardholder's claim of non-receipt.",
+  "key_factors": [
+    "[DE001->] Carrier tracking confirms delivery status as 'Delivered'.",
+    "[DE005->] Delivery proof exists. No signature collected (contactless delivery).",
+    "[SE014->F014] The delivery proof directly supports the merchant's claim of delivery, as it shows the package was delivered to the correct address.",
+    "[SE022->F022] The tracking event confirming delivery directly supports the merchant's claim of delivery, as it shows the package was delivered to the correct address.",
+    "[PE001->F023_EVAL] The carrier's tracking system marks the shipment status as 'Delivered' at the shipping address on file for the order, as confirmed by DE001 delivery_status: PASS.",
+    "[PE004->F026_EVAL] NovaMart is not liable for packages confirmed as delivered by the carrier's tracking system that are lost, stolen, or misplaced after delivery, as per Clause 7.4, and DE001 confirms delivery."
+  ],
+  "counterarguments_considered": [
+    "[DE002->] Cardholder reported 2 day(s) after delivery (delivery: 2026-07-09, report: 2026-07-12). Policy window is 5 days. Within window.",
+    "[SE006->F006] The finding directly supports the cardholder's claim of not receiving the package, as it is an assertion of non-receipt."
+  ],
+  "policy_basis": [
+    "[PE001->F023_EVAL] The carrier's tracking system marks the shipment status as 'Delivered' at the shipping address on file for the order, as confirmed by DE001 delivery_status: PASS.",
+    "[PE004->F026_EVAL] NovaMart is not liable for packages confirmed as delivered by the carrier's tracking system that are lost, stolen, or misplaced after delivery, as per Clause 7.4, and DE001 confirms delivery."
+  ],
+  "evidence_basis": [
+    "[DE001->] Carrier tracking confirms delivery status as 'Delivered'.",
+    "[DE002->] Cardholder reported 2 day(s) after delivery (delivery: 2026-07-09, report: 2026-07-12). Policy window is 5 days. Within window.",
+    "[DE005->] Delivery proof exists. No signature collected (contactless delivery).",
+    "[SE006->F006] The finding directly supports the cardholder's claim of not receiving the package, as it is an assertion of non-receipt.",
+    "[SE014->F014] The delivery proof directly supports the merchant's claim of delivery, as it shows the package was delivered to the correct address.",
+    "[SE022->F022] The tracking event confirming delivery directly supports the merchant's claim of delivery, as it shows the package was delivered to the correct address."
+  ],
+  "insufficient_evidence": [
+    "Does the delivery address match the order/billing address?",
+    "Did the merchant provide tracking information?",
+    "Does the cardholder's non-receipt claim contradict delivery evidence?"
+  ],
+  "explanation": "The cardholder claimed not to have received the item (SE006), but the merchant provided delivery proof (DE005) and carrier tracking confirmed delivery (DE001, PE001). Objective checks showed that the cardholder reported the non-receipt claim within the policy window (DE002, PE002), but the merchant's evidence of delivery was stronger (CONF-delivery_verification). The conflict regarding delivery verification was resolved in favor of the merchant due to the strength of their evidence (CONF-delivery_verification), and policy conditions applied, including the merchant not being liable for packages confirmed as delivered by the carrier's tracking system that are lost, stolen, or misplaced after delivery (PE004). Overall, the evaluations and findings, such as SE014 and PE001, supported the merchant's claim, leading to the outcome in their favor.",
+  "conflicts": [
+    {
+      "conflict_id": "CONF-delivery_verification",
+      "conflict": true,
+      "proposition": "delivery_verification",
+      "side_a": {
+        "party": "cardholder",
+        "evaluation_ids": [
+          "F007"
+        ],
+        "top_source_tier": "TIER_3_ASSERTION",
+        "strength": 0.086
+      },
+      "side_b": {
+        "party": "merchant",
+        "evaluation_ids": [
+          "DE001",
+          "DE005",
+          "F002"
+        ],
+        "top_source_tier": "TIER_2_COMMUNICATION",
+        "strength": 0.7
+      },
+      "resolution": "merchant_evidence_stronger",
+      "misstatement_detected": null,
+      "resolution_basis": "On 'delivery_verification': Merchant evidence (TIER_2_COMMUNICATION, strength=0.7) outweighs cardholder claim (TIER_3_ASSERTION, strength=0.086)."
+    }
+  ],
+  "weighing_summary": {
+    "cardholder_support": 1.3335,
+    "merchant_support": 4.0811,
+    "cardholder_pct": 0.2463,
+    "merchant_pct": 0.7537
+  },
+  "findings": [
+    {
+      "finding_id": "F001",
+      "subject": "shipping_timing",
+      "statement": "Order shipped same week of purchase",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-form-merchant_response_fo-1786215545"
+      ],
+      "source_nodes": [
+        "ast-doc-form-merchant_response_fo-1786215545-1"
+      ],
+      "source_tier": "TIER_3_ASSERTION",
+      "tier_weight": 0.35,
+      "dispute_relevance": "HIGH",
+      "finding_type": "assertion"
+    },
+    {
+      "finding_id": "F002",
+      "subject": "delivery_status",
+      "statement": "Carrier tracking confirms delivery to the address on file within the promised window",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-form-merchant_response_fo-1786215545"
+      ],
+      "source_nodes": [
+        "ast-doc-form-merchant_response_fo-1786215545-2"
+      ],
+      "source_tier": "TIER_3_ASSERTION",
+      "tier_weight": 0.35,
+      "dispute_relevance": "HIGH",
+      "finding_type": "assertion"
+    },
+    {
+      "finding_id": "F003",
+      "subject": "signature_requirement",
+      "statement": "Delivery was contactless per account delivery preferences, so no signature was collected",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-form-merchant_response_fo-1786215545"
+      ],
+      "source_nodes": [
+        "ast-doc-form-merchant_response_fo-1786215545-3"
+      ],
+      "source_tier": "TIER_3_ASSERTION",
+      "tier_weight": 0.35,
+      "dispute_relevance": "HIGH",
+      "finding_type": "assertion"
+    },
+    {
+      "finding_id": "F004",
+      "subject": "complaint_timing",
+      "statement": "Customer's non-receipt report was filed 9 days after the marked delivery date",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-form-merchant_response_fo-1786215545"
+      ],
+      "source_nodes": [
+        "ast-doc-form-merchant_response_fo-1786215545-4"
+      ],
+      "source_tier": "TIER_3_ASSERTION",
+      "tier_weight": 0.35,
+      "dispute_relevance": "HIGH",
+      "finding_type": "assertion"
+    },
+    {
+      "finding_id": "F005",
+      "subject": "delivery_window",
+      "statement": "estimated delivery window July 8-10",
+      "owner": "cardholder",
+      "source_evidence": [
+        "ev-doc-form-cardholder_intake_fo-1786215545"
+      ],
+      "source_nodes": [
+        "ast-doc-form-cardholder_intake_fo-1786215545-1"
+      ],
+      "source_tier": "TIER_3_ASSERTION",
+      "tier_weight": 0.35,
+      "dispute_relevance": "HIGH",
+      "finding_type": "assertion"
+    },
+    {
+      "finding_id": "F006",
+      "subject": "non_receipt",
+      "statement": "never received the package",
+      "owner": "cardholder",
+      "source_evidence": [
+        "ev-doc-form-cardholder_intake_fo-1786215545"
+      ],
+      "source_nodes": [
+        "ast-doc-form-cardholder_intake_fo-1786215545-2"
+      ],
+      "source_tier": "TIER_3_ASSERTION",
+      "tier_weight": 0.35,
+      "dispute_relevance": "HIGH",
+      "finding_type": "assertion"
+    },
+    {
+      "finding_id": "F007",
+      "subject": "delivery_verification",
+      "statement": "checked with front desk and neighbors, nobody saw delivery",
+      "owner": "cardholder",
+      "source_evidence": [
+        "ev-doc-form-cardholder_intake_fo-1786215545"
+      ],
+      "source_nodes": [
+        "ast-doc-form-cardholder_intake_fo-1786215545-3"
+      ],
+      "source_tier": "TIER_3_ASSERTION",
+      "tier_weight": 0.35,
+      "dispute_relevance": "HIGH",
+      "finding_type": "assertion"
+    },
+    {
+      "finding_id": "F008",
+      "subject": "complaint_timing",
+      "statement": "emailed merchant July 12 and July 15",
+      "owner": "cardholder",
+      "source_evidence": [
+        "ev-doc-form-cardholder_intake_fo-1786215545"
+      ],
+      "source_nodes": [
+        "ast-doc-form-cardholder_intake_fo-1786215545-4"
+      ],
+      "source_tier": "TIER_3_ASSERTION",
+      "tier_weight": 0.35,
+      "dispute_relevance": "HIGH",
+      "finding_type": "assertion"
+    },
+    {
+      "finding_id": "F009",
+      "subject": "requested_resolution",
+      "statement": "wants full refund",
+      "owner": "cardholder",
+      "source_evidence": [
+        "ev-doc-form-cardholder_intake_fo-1786215545"
+      ],
+      "source_nodes": [
+        "ast-doc-form-cardholder_intake_fo-1786215545-5"
+      ],
+      "source_tier": "TIER_3_ASSERTION",
+      "tier_weight": 0.35,
+      "dispute_relevance": "HIGH",
+      "finding_type": "assertion"
+    },
+    {
+      "finding_id": "F010",
+      "subject": "message",
+      "statement": "Email from cardholder@example.com on 2026-07-12T11:03:00Z: Hi, my order was expected to arrive July 8-10 and it's now past that window. Can you tell me the status? Nobody at my building saw a delivery.",
+      "owner": "cardholder",
+      "source_evidence": [
+        "ev-doc-cardholder_email_scr-1786215545"
+      ],
+      "source_nodes": [
+        "fact-doc-cardholder_email_scr-1786215545-msg-1"
+      ],
+      "source_tier": "TIER_2_COMMUNICATION",
+      "tier_weight": 0.7,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F011",
+      "subject": "message",
+      "statement": "Email from support@novamart.example on 2026-07-13T08:47:00Z: Thank you for contacting NovaMart support. This is an automated acknowledgment. A team member will follow up shortly.",
+      "owner": "cardholder",
+      "source_evidence": [
+        "ev-doc-cardholder_email_scr-1786215545"
+      ],
+      "source_nodes": [
+        "fact-doc-cardholder_email_scr-1786215545-msg-2"
+      ],
+      "source_tier": "TIER_2_COMMUNICATION",
+      "tier_weight": 0.7,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F012",
+      "subject": "message",
+      "statement": "Email from cardholder@example.com on 2026-07-15T16:30:00Z: It has now been over a week past the delivery window and I have not received any real update. I still do not have the item. Please issue a refund i...",
+      "owner": "cardholder",
+      "source_evidence": [
+        "ev-doc-cardholder_email_scr-1786215545"
+      ],
+      "source_nodes": [
+        "fact-doc-cardholder_email_scr-1786215545-msg-3"
+      ],
+      "source_tier": "TIER_2_COMMUNICATION",
+      "tier_weight": 0.7,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F013",
+      "subject": "purchase_item",
+      "statement": "Purchase: 1x BrewPro Espresso Machine, Stainless Steel at $449.99",
+      "owner": "cardholder",
+      "source_evidence": [
+        "ev-doc-cardholder_order_rec-1786215550"
+      ],
+      "source_nodes": [
+        "fact-doc-cardholder_order_rec-1786215550-item-1"
+      ],
+      "source_tier": "TIER_2_COMMUNICATION",
+      "tier_weight": 0.7,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F014",
+      "subject": "delivery_proof",
+      "statement": "Delivery proof for tracking FTL9284710556: delivered 2026-07-09T15:42:11, no signature collected",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-merchant_delivery_ph-1786215552"
+      ],
+      "source_nodes": [
+        "fact-doc-merchant_delivery_ph-1786215552-delproof"
+      ],
+      "source_tier": "TIER_1_TELEMETRY",
+      "tier_weight": 1.0,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F015",
+      "subject": "policy_rule",
+      "statement": "Policy clause 7.1: An order is considered delivered once the carrier's tracking system marks the shipment status as \"Delivered\" at the shipping address on file for the order.",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-merchant_terms_of_se-1786215557"
+      ],
+      "source_nodes": [
+        "fact-doc-merchant_terms_of_se-1786215557-clause-1"
+      ],
+      "source_tier": "TIER_2_COMMUNICATION",
+      "tier_weight": 0.7,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F016",
+      "subject": "policy_rule",
+      "statement": "Policy clause 7.2: Customers must report a non-receipt claim within 5 business days of the marked delivery date in order to be eligible for investigation. Claims filed after this window may be denied at NovaMart's discretion.",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-merchant_terms_of_se-1786215557"
+      ],
+      "source_nodes": [
+        "fact-doc-merchant_terms_of_se-1786215557-clause-2"
+      ],
+      "source_tier": "TIER_2_COMMUNICATION",
+      "tier_weight": 0.7,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F017",
+      "subject": "policy_rule",
+      "statement": "Policy clause 7.3: Before filing a non-receipt claim, customers are encouraged to check with household members, neighbors, and building/property management, as packages are sometimes accepted or relocated by a third party at the delivery address.",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-merchant_terms_of_se-1786215557"
+      ],
+      "source_nodes": [
+        "fact-doc-merchant_terms_of_se-1786215557-clause-3"
+      ],
+      "source_tier": "TIER_2_COMMUNICATION",
+      "tier_weight": 0.7,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F018",
+      "subject": "policy_rule",
+      "statement": "Policy clause 7.4: NovaMart is not liable for packages confirmed as delivered by the carrier's tracking system that are lost, stolen, or misplaced after delivery.",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-merchant_terms_of_se-1786215557"
+      ],
+      "source_nodes": [
+        "fact-doc-merchant_terms_of_se-1786215557-clause-4"
+      ],
+      "source_tier": "TIER_2_COMMUNICATION",
+      "tier_weight": 0.7,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F019",
+      "subject": "status_event",
+      "statement": "Tracking event: Label Created at Distribution Center - Chicago, IL on 2026-07-06T10:00:00",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-merchant_tracking_re-1786215559"
+      ],
+      "source_nodes": [
+        "fact-doc-merchant_tracking_re-1786215559-track-1"
+      ],
+      "source_tier": "TIER_1_TELEMETRY",
+      "tier_weight": 1.0,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F020",
+      "subject": "status_event",
+      "statement": "Tracking event: In Transit at Chicago, IL on 2026-07-06T18:22:00",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-merchant_tracking_re-1786215559"
+      ],
+      "source_nodes": [
+        "fact-doc-merchant_tracking_re-1786215559-track-2"
+      ],
+      "source_tier": "TIER_1_TELEMETRY",
+      "tier_weight": 1.0,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F021",
+      "subject": "status_event",
+      "statement": "Tracking event: Out for Delivery at Springfield, IL on 2026-07-08T07:15:00",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-merchant_tracking_re-1786215559"
+      ],
+      "source_nodes": [
+        "fact-doc-merchant_tracking_re-1786215559-track-3"
+      ],
+      "source_tier": "TIER_1_TELEMETRY",
+      "tier_weight": 1.0,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F022",
+      "subject": "status_event",
+      "statement": "Tracking event: Delivered at 412 Maple Court, Springfield, IL on 2026-07-09T15:42:00",
+      "owner": "merchant",
+      "source_evidence": [
+        "ev-doc-merchant_tracking_re-1786215559"
+      ],
+      "source_nodes": [
+        "fact-doc-merchant_tracking_re-1786215559-track-4"
+      ],
+      "source_tier": "TIER_1_TELEMETRY",
+      "tier_weight": 1.0,
+      "dispute_relevance": "HIGH",
+      "finding_type": "fact"
+    },
+    {
+      "finding_id": "F023",
+      "subject": "policy_rule",
+      "statement": "An order is considered delivered once the carrier's tracking system marks the shipment status as \"Delivered\" at the shipping address on file for the order.",
+      "owner": "merchant",
+      "source_evidence": [],
+      "source_nodes": [
+        "fact-doc-merchant_terms_of_se-1786215557-clause-1"
+      ],
+      "source_tier": "TIER_2_COMMUNICATION",
+      "tier_weight": 0.7,
+      "dispute_relevance": "HIGH",
+      "finding_type": "policy"
+    },
+    {
+      "finding_id": "F024",
+      "subject": "policy_rule",
+      "statement": "Customers must report a non-receipt claim within 5 business days of the marked delivery date in order to be eligible for investigation. Claims filed after this window may be denied at NovaMart's discretion.",
+      "owner": "merchant",
+      "source_evidence": [],
+      "source_nodes": [
+        "fact-doc-merchant_terms_of_se-1786215557-clause-2"
+      ],
+      "source_tier": "TIER_2_COMMUNICATION",
+      "tier_weight": 0.7,
+      "dispute_relevance": "HIGH",
+      "finding_type": "policy"
+    },
+    {
+      "finding_id": "F025",
+      "subject": "policy_rule",
+      "statement": "Before filing a non-receipt claim, customers are encouraged to check with household members, neighbors, and building/property management, as packages are sometimes accepted or relocated by a third party at the delivery address.",
+      "owner": "merchant",
+      "source_evidence": [],
+      "source_nodes": [
+        "fact-doc-merchant_terms_of_se-1786215557-clause-3"
+      ],
+      "source_tier": "TIER_2_COMMUNICATION",
+      "tier_weight": 0.7,
+      "dispute_relevance": "HIGH",
+      "finding_type": "policy"
+    },
+    {
+      "finding_id": "F026",
+      "subject": "policy_rule",
+      "statement": "NovaMart is not liable for packages confirmed as delivered by the carrier's tracking system that are lost, stolen, or misplaced after delivery.",
+      "owner": "merchant",
+      "source_evidence": [],
+      "source_nodes": [
+        "fact-doc-merchant_terms_of_se-1786215557-clause-4"
+      ],
+      "source_tier": "TIER_2_COMMUNICATION",
+      "tier_weight": 0.7,
+      "dispute_relevance": "HIGH",
+      "finding_type": "policy"
+    }
+  ],
+  "evaluations": {
+    "deterministic": [
+      {
+        "eval_id": "DE001",
+        "check_id": "delivery_status",
+        "description": "Does tracking show a 'Delivered' status?",
+        "result": "PASS",
+        "detail": "Carrier tracking confirms delivery status as 'Delivered'.",
+        "source_findings": [
+          "F022"
+        ],
+        "effect": "SUPPORTS_MERCHANT",
+        "relevance": "DIRECT",
+        "confidence": 1.0
+      },
+      {
+        "eval_id": "DE002",
+        "check_id": "reporting_window",
+        "description": "Was the dispute reported within 5 days of delivery?",
+        "result": "PASS",
+        "detail": "Cardholder reported 2 day(s) after delivery (delivery: 2026-07-09, report: 2026-07-12). Policy window is 5 days. Within window.",
+        "source_findings": [
+          "F024"
+        ],
+        "effect": "SUPPORTS_CARDHOLDER",
+        "relevance": "HIGH",
+        "confidence": 1.0
+      },
+      {
+        "eval_id": "DE003",
+        "check_id": "complaint_timing_verification",
+        "description": "Does the merchant's asserted complaint timing match actual dates?",
+        "result": "FAIL",
+        "detail": "Merchant asserted customer reported 9 days after delivery, but actual gap is 2 days (delivery: 2026-07-09, first contact: 2026-07-12). Merchant misstated the timing.",
+        "source_findings": [
+          "F004"
+        ],
+        "effect": "CONTRADICTS_MERCHANT",
+        "relevance": "MEDIUM",
+        "confidence": 1.0
+      },
+      {
+        "eval_id": "DE004",
+        "check_id": "delivery_address_available",
+        "description": "Is a delivery address available from tracking?",
+        "result": "PASS",
+        "detail": "Tracking shows delivery to: 412 Maple Court, Springfield, IL",
+        "source_findings": [
+          "F022"
+        ],
+        "effect": "NEUTRAL",
+        "relevance": "MEDIUM",
+        "confidence": 1.0
+      },
+      {
+        "eval_id": "DE005",
+        "check_id": "delivery_proof_exists",
+        "description": "Is there photographic or documentary proof of delivery?",
+        "result": "PASS",
+        "detail": "Delivery proof exists. No signature collected (contactless delivery).",
+        "source_findings": [
+          "F014"
+        ],
+        "effect": "SUPPORTS_MERCHANT",
+        "relevance": "HIGH",
+        "confidence": 1.0
+      }
+    ],
+    "semantic": [
+      {
+        "eval_id": "SE001",
+        "finding_id": "F001",
+        "eval_type": "semantic",
+        "relevance": "LOW",
+        "effect": "SUPPORTS_MERCHANT",
+        "confidence": 0.6,
+        "reason": "The finding indicates the order was shipped the same week of purchase, which supports the merchant's claim of timely shipping, but does not directly address the delivery issue.",
+        "addresses_question": "Was the item shipped to the correct address?"
+      },
+      {
+        "eval_id": "SE002",
+        "finding_id": "F002",
+        "eval_type": "semantic",
+        "relevance": "MEDIUM",
+        "effect": "SUPPORTS_MERCHANT",
+        "confidence": 0.8,
+        "reason": "The finding suggests that carrier tracking confirms delivery within the promised window, which supports the merchant's claim, but does not provide direct proof of delivery.",
+        "addresses_question": "Was delivery confirmed by carrier tracking evidence?"
+      },
+      {
+        "eval_id": "SE003",
+        "finding_id": "F003",
+        "eval_type": "semantic",
+        "relevance": "MEDIUM",
+        "effect": "SUPPORTS_MERCHANT",
+        "confidence": 0.7,
+        "reason": "The finding explains the lack of a signature due to contactless delivery, which supports the merchant's claim of following delivery preferences, but does not directly prove delivery.",
+        "addresses_question": "Is there photographic or signature proof of delivery?"
+      },
+      {
+        "eval_id": "SE004",
+        "finding_id": "F004",
+        "eval_type": "semantic",
+        "relevance": "LOW",
+        "effect": "CONTRADICTS_MERCHANT",
+        "confidence": 0.9,
+        "reason": "The finding contradicts the merchant's claim of the customer reporting 9 days after delivery, as the actual report was made 2 days after delivery, which undermines the merchant's assertion.",
+        "addresses_question": "Was the dispute reported within the merchant's policy window?"
+      },
+      {
+        "eval_id": "SE005",
+        "finding_id": "F005",
+        "eval_type": "semantic",
+        "relevance": "LOW",
+        "effect": "NEUTRAL",
+        "confidence": 0.5,
+        "reason": "The finding provides the cardholder's expected delivery window, which is neutral information and does not directly support or contradict either party.",
+        "addresses_question": "none"
+      },
+      {
+        "eval_id": "SE006",
+        "finding_id": "F006",
+        "eval_type": "semantic",
+        "relevance": "HIGH",
+        "effect": "SUPPORTS_CARDHOLDER",
+        "confidence": 0.9,
+        "reason": "The finding directly supports the cardholder's claim of not receiving the package, as it is an assertion of non-receipt.",
+        "addresses_question": "Was the item shipped to the correct address?"
+      },
+      {
+        "eval_id": "SE007",
+        "finding_id": "F007",
+        "eval_type": "semantic",
+        "relevance": "MEDIUM",
+        "effect": "SUPPORTS_CARDHOLDER",
+        "confidence": 0.7,
+        "reason": "The finding indicates the cardholder's effort to verify delivery with neighbors and front desk, which supports their claim of not receiving the package, but does not prove non-delivery.",
+        "addresses_question": "Did the cardholder attempt to resolve with the merchant before disputing?"
+      },
+      {
+        "eval_id": "SE008",
+        "finding_id": "F008",
+        "eval_type": "semantic",
+        "relevance": "MEDIUM",
+        "effect": "NEUTRAL",
+        "confidence": 0.6,
+        "reason": "The finding shows the cardholder's attempt to communicate with the merchant, which is neutral and indicates an attempt to resolve the issue but does not directly support or contradict either party's claim.",
+        "addresses_question": "Did the cardholder attempt to resolve with the merchant before disputing?"
+      },
+      {
+        "eval_id": "SE009",
+        "finding_id": "F009",
+        "eval_type": "semantic",
+        "relevance": "LOW",
+        "effect": "NEUTRAL",
+        "confidence": 0.5,
+        "reason": "The finding indicates the cardholder's desired resolution, which is neutral information and does not directly support or contradict either party's claim.",
+        "addresses_question": "none"
+      },
+      {
+        "eval_id": "SE010",
+        "finding_id": "F010",
+        "eval_type": "semantic",
+        "relevance": "MEDIUM",
+        "effect": "SUPPORTS_CARDHOLDER",
+        "confidence": 0.7,
+        "reason": "The email from the cardholder to the merchant inquiring about the status of the order supports the cardholder's claim of not receiving the package and attempting to resolve the issue.",
+        "addresses_question": "Did the cardholder attempt to resolve with the merchant before disputing?"
+      },
+      {
+        "eval_id": "SE011",
+        "finding_id": "F011",
+        "eval_type": "semantic",
+        "relevance": "LOW",
+        "effect": "NEUTRAL",
+        "confidence": 0.5,
+        "reason": "The automated response from the merchant's support is neutral, as it does not directly address the issue or support either party's claim.",
+        "addresses_question": "none"
+      },
+      {
+        "eval_id": "SE012",
+        "finding_id": "F012",
+        "eval_type": "semantic",
+        "relevance": "MEDIUM",
+        "effect": "SUPPORTS_CARDHOLDER",
+        "confidence": 0.7,
+        "reason": "The follow-up email from the cardholder to the merchant further supports the cardholder's claim of not receiving the package and their effort to resolve the issue.",
+        "addresses_question": "Did the cardholder attempt to resolve with the merchant before disputing?"
+      },
+      {
+        "eval_id": "SE013",
+        "finding_id": "F013",
+        "eval_type": "semantic",
+        "relevance": "MEDIUM",
+        "effect": "SUPPORTS_MERCHANT",
+        "confidence": 0.6,
+        "reason": "The purchase details support the merchant's claim regarding the order's correctness, but do not directly address the delivery issue.",
+        "addresses_question": "Was the item shipped to the correct address?"
+      },
+      {
+        "eval_id": "SE014",
+        "finding_id": "F014",
+        "eval_type": "semantic",
+        "relevance": "DIRECT",
+        "effect": "SUPPORTS_MERCHANT",
+        "confidence": 0.9,
+        "reason": "The delivery proof directly supports the merchant's claim of delivery, as it shows the package was delivered to the correct address.",
+        "addresses_question": "Was delivery confirmed by carrier tracking evidence?"
+      },
+      {
+        "eval_id": "SE015",
+        "finding_id": "F015",
+        "eval_type": "semantic",
+        "relevance": "LOW",
+        "effect": "NEUTRAL",
+        "confidence": 0.5,
+        "reason": "The policy clause regarding delivery status is neutral, as it provides general information about the merchant's policy without directly supporting or contradicting either party's claim.",
+        "addresses_question": "none"
+      },
+      {
+        "eval_id": "SE016",
+        "finding_id": "F016",
+        "eval_type": "semantic",
+        "relevance": "LOW",
+        "effect": "NEUTRAL",
+        "confidence": 0.5,
+        "reason": "The policy clause about reporting non-receipt claims is neutral, as it provides information about the merchant's policy without directly supporting or contradicting either party's claim.",
+        "addresses_question": "Was the dispute reported within the merchant's policy window?"
+      },
+      {
+        "eval_id": "SE017",
+        "finding_id": "F017",
+        "eval_type": "semantic",
+        "relevance": "LOW",
+        "effect": "NEUTRAL",
+        "confidence": 0.5,
+        "reason": "The policy clause encouraging customers to check with others before filing a claim is neutral, as it provides general guidance without directly supporting or contradicting either party's claim.",
+        "addresses_question": "none"
+      },
+      {
+        "eval_id": "SE018",
+        "finding_id": "F018",
+        "eval_type": "semantic",
+        "relevance": "LOW",
+        "effect": "NEUTRAL",
+        "confidence": 0.5,
+        "reason": "The policy clause about liability for lost or misplaced packages after delivery is neutral, as it provides information about the merchant's policy without directly supporting or contradicting either party's claim.",
+        "addresses_question": "none"
+      },
+      {
+        "eval_id": "SE019",
+        "finding_id": "F019",
+        "eval_type": "semantic",
+        "relevance": "LOW",
+        "effect": "NEUTRAL",
+        "confidence": 0.5,
+        "reason": "The tracking event of the label being created is neutral, as it provides information about the shipping process without directly supporting or contradicting either party's claim.",
+        "addresses_question": "none"
+      },
+      {
+        "eval_id": "SE020",
+        "finding_id": "F020",
+        "eval_type": "semantic",
+        "relevance": "LOW",
+        "effect": "NEUTRAL",
+        "confidence": 0.5,
+        "reason": "The tracking event of the package being in transit is neutral, as it provides information about the shipping process without directly supporting or contradicting either party's claim.",
+        "addresses_question": "none"
+      },
+      {
+        "eval_id": "SE021",
+        "finding_id": "F021",
+        "eval_type": "semantic",
+        "relevance": "LOW",
+        "effect": "NEUTRAL",
+        "confidence": 0.5,
+        "reason": "The tracking event of the package being out for delivery is neutral, as it provides information about the shipping process without directly supporting or contradicting either party's claim.",
+        "addresses_question": "none"
+      },
+      {
+        "eval_id": "SE022",
+        "finding_id": "F022",
+        "eval_type": "semantic",
+        "relevance": "DIRECT",
+        "effect": "SUPPORTS_MERCHANT",
+        "confidence": 0.9,
+        "reason": "The tracking event confirming delivery directly supports the merchant's claim of delivery, as it shows the package was delivered to the correct address.",
+        "addresses_question": "Was delivery confirmed by carrier tracking evidence?"
+      },
+      {
+        "eval_id": "PE001",
+        "finding_id": "F023_EVAL",
+        "eval_type": "policy",
+        "clause_id": "F023",
+        "status": "SATISFIES",
+        "effect": "SUPPORTS_MERCHANT",
+        "relevance": "HIGH",
+        "confidence": 1.0,
+        "detail": "The carrier's tracking system marks the shipment status as 'Delivered' at the shipping address on file for the order, as confirmed by DE001 delivery_status: PASS.",
+        "material_to_outcome": true
+      },
+      {
+        "eval_id": "PE002",
+        "finding_id": "F024_EVAL",
+        "eval_type": "policy",
+        "clause_id": "F024",
+        "status": "SATISFIES",
+        "effect": "SUPPORTS_CARDHOLDER",
+        "relevance": "MEDIUM",
+        "confidence": 1.0,
+        "detail": "The cardholder reported the non-receipt claim within 5 business days of the marked delivery date, as verified by DE002 reporting_window: PASS.",
+        "material_to_outcome": true
+      },
+      {
+        "eval_id": "PE003",
+        "finding_id": "F025_EVAL",
+        "eval_type": "policy",
+        "clause_id": "F025",
+        "status": "SATISFIES",
+        "effect": "NEUTRAL",
+        "relevance": "LOW",
+        "confidence": 0.8,
+        "detail": "The cardholder checked with front desk and neighbors, as stated in F007, which aligns with the encouragement in Clause 7.3, but this does not directly impact the dispute outcome.",
+        "material_to_outcome": false
+      },
+      {
+        "eval_id": "PE004",
+        "finding_id": "F026_EVAL",
+        "eval_type": "policy",
+        "clause_id": "F026",
+        "status": "SATISFIES",
+        "effect": "SUPPORTS_MERCHANT",
+        "relevance": "HIGH",
+        "confidence": 1.0,
+        "detail": "NovaMart is not liable for packages confirmed as delivered by the carrier's tracking system that are lost, stolen, or misplaced after delivery, as per Clause 7.4, and DE001 confirms delivery.",
+        "material_to_outcome": true
+      }
+    ]
+  },
+  "reasoning_trace": [
+    "Final outcome: MERCHANT",
+    "Total evaluations: 31",
+    "Conflicts identified: 1",
+    "  DE001 -> ? -> []: effect=SUPPORTS_MERCHANT, relevance=DIRECT",
+    "  DE002 -> ? -> []: effect=SUPPORTS_CARDHOLDER, relevance=HIGH",
+    "  DE005 -> ? -> []: effect=SUPPORTS_MERCHANT, relevance=HIGH",
+    "  SE006 -> F006 -> ['ev-doc-form-cardholder_intake_fo-1786215545']: effect=SUPPORTS_CARDHOLDER, relevance=HIGH",
+    "  SE014 -> F014 -> ['ev-doc-merchant_delivery_ph-1786215552']: effect=SUPPORTS_MERCHANT, relevance=DIRECT",
+    "  SE022 -> F022 -> ['ev-doc-merchant_tracking_re-1786215559']: effect=SUPPORTS_MERCHANT, relevance=DIRECT",
+    "  PE001 -> F023_EVAL -> []: effect=SUPPORTS_MERCHANT, relevance=HIGH",
+    "  PE004 -> F026_EVAL -> []: effect=SUPPORTS_MERCHANT, relevance=HIGH",
+    "  Conflict on 'delivery_verification': resolved as merchant_evidence_stronger"
+  ],
+  "pipeline": "hybrid_reasoning_engine_v1",
+  "run_at": "2026-08-15T19:57:23.332446+00:00",
+  "execution_time_seconds": 17.65
+}
