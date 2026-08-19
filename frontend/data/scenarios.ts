@@ -1,0 +1,46 @@
+export type Evidence = { id: string; name: string; type: string; detail: string; selected?: boolean }
+export type Scenario = {
+  id: string; label: string; category: string; amount: string; merchant: string; customer: string; date: string
+  claim: string; merchantPrompt: string; customerEvidence: Evidence[]; merchantEvidence: Evidence[]
+  decision: { outcome: string; confidence: string; summary: string; factors: string[] }
+  reasoning: { question: string; claims: string[]; signals: string[]; conclusion: string }
+  graph: { nodes: { id: string; label: string; kind: string }[]; edges: [string, string][] }
+}
+
+const ev = (id: string, name: string, type: string, detail: string): Evidence => ({ id, name, type, detail })
+
+export const scenarios: Scenario[] = [
+  {
+    id: 'duplicate', label: 'Duplicate charge', category: 'Card purchase dispute', amount: '$84.20', merchant: 'Northstar Outfitters', customer: 'Maya Chen', date: 'Jun 18, 2025',
+    claim: 'I was charged twice for the same jacket order. I only received one item and would like the duplicate charge reversed.', merchantPrompt: 'Explain what happened with this order and provide any evidence that supports your response.',
+    customerEvidence: [ev('c1','Bank statement.pdf','PDF','Two matching charges · Jun 18'), ev('c2','Order confirmation.png','PNG','Order #NS-4821 · $84.20'), ev('c3','Chat with merchant.txt','TXT','Customer support transcript')],
+    merchantEvidence: [ev('m1','Payment ledger.csv','CSV','Two authorizations · one capture'), ev('m2','Fulfillment record.pdf','PDF','One shipment · tracking delivered'), ev('m3','Gateway event log.json','JSON','Second authorization reversed')],
+    decision: { outcome: 'Refund recommended', confidence: '94%', summary: 'The customer experienced a duplicate authorization, but only one payment was captured. Recommend refunding the captured duplicate if it settles.', factors: ['Two matching customer-side charges', 'One fulfillment event', 'Second authorization shows reversal'] },
+    reasoning: { question: 'Was the customer charged twice for one fulfilled order?', claims: ['Customer reports two identical charges.', 'Merchant fulfilled a single jacket order.'], signals: ['Amounts and timestamps match within 12 seconds.', 'Gateway log marks the second authorization as reversed.', 'No second shipment or order exists.'], conclusion: 'Evidence supports a duplicate authorization experience. Resolution should favor the customer while checking settlement status.' },
+    graph: { nodes: [{id:'customer',label:'Maya Chen',kind:'person'},{id:'order',label:'Order #NS-4821',kind:'order'},{id:'pay1',label:'$84.20 captured',kind:'payment'},{id:'pay2',label:'$84.20 reversed',kind:'payment'},{id:'ship',label:'One shipment',kind:'fulfillment'}], edges: [['customer','order'],['order','pay1'],['order','pay2'],['order','ship']] }
+  },
+  {
+    id: 'not-received', label: 'Item not received', category: 'Delivery dispute', amount: '$129.00', merchant: 'Lumen Home', customer: 'Jordan Brooks', date: 'Jun 22, 2025',
+    claim: 'My order says delivered, but nothing arrived at my address. Please investigate the delivery and help me recover the charge.', merchantPrompt: 'Share delivery evidence and any relevant customer communication.',
+    customerEvidence: [ev('c1','Building front desk.txt','TXT','No package logged for unit 4B'), ev('c2','Delivery photo.png','PNG','No matching doorway visible'), ev('c3','Order details.pdf','PDF','Order #LM-7782 · $129.00')], merchantEvidence: [ev('m1','Carrier scan.pdf','PDF','Delivered · Jun 22 · 2:14 PM'), ev('m2','Delivery photo.jpg','JPG','Package at building entrance'), ev('m3','Address verification.csv','CSV','Address matched checkout')],
+    decision: { outcome: 'More evidence needed', confidence: '78%', summary: 'Carrier evidence confirms delivery to the verified address, but the photo is not conclusive. Request carrier GPS scan and building access logs before finalizing.', factors: ['Carrier marks delivered', 'Address matched checkout', 'Delivery photo lacks clear unit context'] },
+    reasoning: { question: 'Did the order reach the customer or an authorized delivery point?', claims: ['Customer cannot locate the parcel.', 'Carrier reports successful delivery.'], signals: ['Address is verified.', 'Photo shows a shared entrance.', 'No GPS coordinates were supplied.'], conclusion: 'The record is inconclusive. Hold a final decision until delivery-location evidence is available.' }, graph: { nodes: [{id:'customer',label:'Jordan Brooks',kind:'person'},{id:'order',label:'Order #LM-7782',kind:'order'},{id:'carrier',label:'Carrier scan',kind:'delivery'},{id:'photo',label:'Entrance photo',kind:'evidence'},{id:'address',label:'Verified address',kind:'address'}], edges: [['customer','order'],['order','carrier'],['carrier','photo'],['order','address']] }
+  },
+  {
+    id: 'wrong-amount', label: 'Wrong amount', category: 'Billing dispute', amount: '$210.00', merchant: 'Atlas Mobility', customer: 'Riley Park', date: 'Jun 11, 2025', claim: 'The amount charged is higher than the price I agreed to at checkout.', merchantPrompt: 'Provide the price shown at checkout and explain any difference in the settled amount.', customerEvidence: [ev('c1','Checkout screenshot.png','PNG','Displayed total · $180.00'), ev('c2','Card statement.pdf','PDF','Settled amount · $210.00')], merchantEvidence: [ev('m1','Invoice.pdf','PDF','Invoice total · $210.00'), ev('m2','Price history.csv','CSV','Plan changed before renewal'), ev('m3','Terms accepted.html','HTML','Renewal pricing disclosed')], decision: { outcome: 'Partial refund recommended', confidence: '87%', summary: 'The original checkout total differs from the settled renewal amount. A partial refund aligns the customer with the disclosed pre-renewal price.', factors: ['Checkout screenshot shows $180', 'Invoice shows $210 renewal', 'Terms disclose renewal change'] }, reasoning: { question: 'Was the settled amount clearly disclosed before payment?', claims: ['Customer expected $180.', 'Merchant charged a disclosed renewal price.'], signals: ['Customer evidence is from initial checkout.', 'Merchant evidence is from renewal.', 'Account has an active renewal plan.'], conclusion: 'The charge is valid as a renewal, but the price transition created a material expectation gap.' }, graph: { nodes: [{id:'customer',label:'Riley Park',kind:'person'},{id:'plan',label:'Mobility plan',kind:'subscription'},{id:'old',label:'$180 checkout',kind:'payment'},{id:'new',label:'$210 renewal',kind:'payment'},{id:'terms',label:'Renewal terms',kind:'evidence'}], edges: [['customer','plan'],['plan','old'],['plan','new'],['plan','terms']] }
+  },
+  {
+    id: 'unauthorized', label: 'Unauthorized payment', category: 'Fraud claim', amount: '$46.75', merchant: 'Garden State Market', customer: 'Avery Singh', date: 'Jun 25, 2025', claim: 'I do not recognize this payment and did not authorize anyone to use my card.', merchantPrompt: 'Provide transaction signals, device information, and any authentication record.', customerEvidence: [ev('c1','Card statement.pdf','PDF','Unrecognized transaction · $46.75'), ev('c2','Customer attestation.txt','TXT','Signed non-authorization statement')], merchantEvidence: [ev('m1','3DS authentication.json','JSON','Authentication passed'), ev('m2','Device fingerprint.csv','CSV','Known device and IP range'), ev('m3','Receipt.pdf','PDF','In-store receipt · Jun 25')], decision: { outcome: 'Liability review required', confidence: '81%', summary: 'Strong authentication and a known device reduce fraud likelihood, but the customer attestation requires an issuer-level review.', factors: ['3DS authentication passed', 'Known device signal', 'Customer denies authorization'] }, reasoning: { question: 'Do transaction signals establish authorized cardholder involvement?', claims: ['Customer denies the payment.', 'Merchant has authentication and device evidence.'], signals: ['3DS challenge passed.', 'Device matches prior activity.', 'In-store receipt is present.'], conclusion: 'Merchant evidence is strong, but final liability belongs with the issuer after reviewing the attestation.' }, graph: { nodes: [{id:'customer',label:'Avery Singh',kind:'person'},{id:'txn',label:'$46.75 transaction',kind:'payment'},{id:'auth',label:'3DS passed',kind:'authentication'},{id:'device',label:'Known device',kind:'signal'},{id:'receipt',label:'Store receipt',kind:'evidence'}], edges: [['customer','txn'],['txn','auth'],['txn','device'],['txn','receipt']] }
+  }
+]
+
+export const getScenario = (id: string) => scenarios.find((scenario) => scenario.id === id) ?? scenarios[0]
+
+export type TimelineEvent = { label: string; detail: string; status: 'complete' | 'current' | 'pending' }
+export const initialTimeline = (): TimelineEvent[] => [
+  { label: 'Case created', detail: 'Customer started a new dispute', status: 'current' },
+  { label: 'Merchant notified', detail: 'Waiting for customer submission', status: 'pending' },
+  { label: 'Merchant response', detail: 'Merchant has not responded', status: 'pending' },
+  { label: 'AI investigation', detail: 'Evidence review has not started', status: 'pending' },
+  { label: 'Decision ready', detail: 'Outcome will appear here', status: 'pending' },
+]
