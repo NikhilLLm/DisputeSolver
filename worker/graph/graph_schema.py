@@ -13,7 +13,18 @@ from __future__ import annotations
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Set
 
-SCHEMA_VERSION = "v5_layered_atomized"
+SCHEMA_VERSION = "v5_layered_atomized_hybrid"
+
+# ==========================================================
+# VECTOR EMBEDDING CONFIGURATION
+# ==========================================================
+# Using lightweight sentence-transformers/all-MiniLM-L6-v2 (384 dimensions)
+# for semantic similarity on text-heavy nodes (Assertions, FactNodes with
+# message/policy_rule types). Cosine similarity for matching.
+
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_DIMENSIONS = 384
+EMBEDDING_SIMILARITY = "cosine"
 
 # ==========================================================
 # CANONICAL VOCABULARIES
@@ -49,6 +60,23 @@ ASSERTION_SUBJECT_VOCABULARY: Set[str] = {
     "amount_discrepancy",
     # Generic
     "unknown",
+}
+
+EVIDENCE_SOURCE_TIERS: Dict[str, float] = {
+    "TIER_1_TELEMETRY": 1.0,      # Tamper-resistant 3rd-party data (GPS, carrier scans, 3DS crypto, ARNs)
+    "TIER_2_COMMUNICATION": 0.7,  # Contemporaneous timestamped emails, chat transcripts, SMS
+    "TIER_3_ASSERTION": 0.35,     # Post-dispute subjective form narratives
+}
+
+EVIDENCE_TYPE_TO_TIER: Dict[str, str] = {
+    "DELIVERY_PROOF": "TIER_1_TELEMETRY",
+    "TRACKING_REPORT": "TIER_1_TELEMETRY",
+    "PROCESSOR_LOG": "TIER_1_TELEMETRY",
+    "USAGE_LOG": "TIER_1_TELEMETRY",
+    "COMMUNICATION_LOG": "TIER_2_COMMUNICATION",
+    "PURCHASE_RECORD": "TIER_2_COMMUNICATION",
+    "MERCHANT_POLICY": "TIER_2_COMMUNICATION",
+    "DISPUTE_FORM": "TIER_3_ASSERTION",
 }
 
 FACT_TYPE_VOCABULARY: Set[str] = {
@@ -169,12 +197,27 @@ CONSTRAINTS: List[str] = [
     "CREATE CONSTRAINT IF NOT EXISTS FOR (ent:Entity) REQUIRE (ent.entity_id, ent.case_id) IS NODE KEY",
 ]
 
+# Vector indexes for semantic similarity search on text-heavy nodes
+VECTOR_INDEXES: List[str] = [
+    # Assertion embeddings — for matching cardholder/merchant claims against evidence
+    f"""CREATE VECTOR INDEX assertion_embeddings IF NOT EXISTS
+FOR (a:Assertion) ON (a.embedding)
+OPTIONS {{indexConfig: {{`vector.dimensions`: {EMBEDDING_DIMENSIONS}, `vector.similarity_function`: '{EMBEDDING_SIMILARITY}'}}}}""",
+    # FactNode embeddings — for policy clauses, messages, and other text-heavy facts
+    f"""CREATE VECTOR INDEX factnode_embeddings IF NOT EXISTS
+FOR (f:FactNode) ON (f.embedding)
+OPTIONS {{indexConfig: {{`vector.dimensions`: {EMBEDDING_DIMENSIONS}, `vector.similarity_function`: '{EMBEDDING_SIMILARITY}'}}}}""",
+]
+
 
 def get_schema() -> Dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
         "layers": [asdict(l) for l in LAYERS],
         "constraints": CONSTRAINTS,
+        "vector_indexes": VECTOR_INDEXES,
+        "embedding_model": EMBEDDING_MODEL,
+        "embedding_dimensions": EMBEDDING_DIMENSIONS,
         "assertion_subjects": sorted(list(ASSERTION_SUBJECT_VOCABULARY)),
         "fact_types": sorted(list(FACT_TYPE_VOCABULARY)),
         "relationships": sorted(list(RELATIONSHIP_VOCABULARY)),
