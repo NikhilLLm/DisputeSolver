@@ -1,10 +1,10 @@
 # Ignore these specific files
 project.drawio
 PROMPT_1.md
+WORK.md
 
 bloom-export(1).zip
 .env
 
 
 output/
-WORK.md
