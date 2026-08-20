@@ -189,46 +189,6 @@ The `frontend/` folder contains an interactive, high-fidelity **Next.js & React 
 - **Topology Graph Visualizer:** Visual node representation of involved parties, payment captures, delivery scans, and authentication tokens.
 - **AI Recommendation Panel:** Real-time breakdown of confidence metrics, reasoning questions, and decisive signals.
 
----
-
-## 🔮 Future Roadmap: The AI Dispute Assistant & Co-Pilot
-
-The next evolution of DisputeSolver transitions the project from a standalone batch resolver to an **interactive AI Dispute Co-Pilot**:
-
-```mermaid
-flowchart LR
-    subgraph TRADITIONAL["Traditional Dispute Review"]
-        M1["Manual PDF Review\n(20-45 mins per case)"]
-        M2["Subjective Evaluation"]
-        M3["Missed Deadlines & Losses"]
-    end
-
-    subgraph COPILOT["DisputeSolver AI Co-Pilot"]
-        C1["Instant Multi-Agent Triage\n(< 5 seconds)"]
-        C2["Natural Language Cypher Q&A"]
-        C3["1-Click Automated Evidence Packets"]
-        C4["Defensible, Audit-Ready Decisions"]
-    end
-
-    TRADITIONAL ==>|Transformation| COPILOT
-```
-
-### 1. Live Backend $\leftrightarrow$ Frontend API Integration
-- Implement FastAPI REST and WebSocket endpoints connecting the Next.js frontend directly to the Python orchestrator and live Neo4j database.
-- Stream agent reasoning steps in real-time to the UI.
-
-### 2. Interactive Natural Language Examiner Co-Pilot
-- Enable analysts to chat with the dispute graph in natural language:
-  - *"Did the customer contact support before disputing?"*
-  - *"Highlight any discrepancies between the carrier GPS coordinate and billing address."*
-  - *"Show me all similar cases with this merchant over the last 90 days."*
-
-### 3. Automated Network Evidence Packet Generation
-- Generate formatted, network-compliant PDF response packets for Visa Resolve Online (VROL) and Mastercard MasterCom with 1 click.
-
-### 4. Dynamic Human-in-the-Loop Workflow Modes
-- **Mode A (Straight-Through Processing):** Auto-adjudicate high-confidence cases ($\ge 90\%$).
-- **Mode B (Examiner Assisted):** Queue borderline or high-value cases for human review with pre-filled recommendations and key factor summaries.
 
 ---
 
@@ -357,5 +317,52 @@ flowchart LR
    Open [http://localhost:3000](http://localhost:3000) in your browser to interact with the dispute simulation workbench.
 
 ---
+## Limitations
+
+-The data is used in this pipeline is generated synthetically by LLM.
+-The data is just reflection how actual evidences in real world will look like 
+
+## 🔮 Future Roadmap: The AI Dispute Assistant & Co-Pilot
+
+The next evolution of DisputeSolver transitions the project from a standalone batch resolver to an **interactive AI Dispute Co-Pilot**:
+
+```mermaid
+flowchart LR
+    subgraph TRADITIONAL["Traditional Dispute Review"]
+        M1["Manual PDF Review\n(20-45 mins per case)"]
+        M2["Subjective Evaluation"]
+        M3["Missed Deadlines & Losses"]
+    end
+
+    subgraph COPILOT["DisputeSolver AI Co-Pilot"]
+        C1["Instant Multi-Agent Triage\n(< 5 seconds)"]
+        C2["Natural Language Cypher Q&A"]
+        C3["1-Click Automated Evidence Packets"]
+        C4["Defensible, Audit-Ready Decisions"]
+    end
+
+    TRADITIONAL ==>|Transformation| COPILOT
+```
+
+### 1. Live Backend $\leftrightarrow$ Frontend API Integration
+- Implement FastAPI REST and WebSocket endpoints connecting the Next.js frontend directly to the Python orchestrator and live Neo4j database.
+- Stream agent reasoning steps in real-time to the UI.
+
+### 2. Interactive Natural Language Examiner Co-Pilot
+- Enable analysts to chat with the dispute graph in natural language:
+  - *"Did the customer contact support before disputing?"*
+  - *"Highlight any discrepancies between the carrier GPS coordinate and billing address."*
+  - *"Show me all similar cases with this merchant over the last 90 days."*
+
+### 3. Automated Network Evidence Packet Generation
+- Generate formatted, network-compliant PDF response packets for Visa Resolve Online (VROL) and Mastercard MasterCom with 1 click.
+
+### 4. Dynamic Human-in-the-Loop Workflow Modes
+- **Mode A (Straight-Through Processing):** Auto-adjudicate high-confidence cases ($\ge 90\%$).
+- **Mode B (Examiner Assisted):** Queue borderline or high-value cases for human review with pre-filled recommendations and key factor summaries.
+
+### 5.Improving Data Quality For PlayGround
+- Importing the real world data & converting playground simulation more robust & trustworthy
+
 
 
