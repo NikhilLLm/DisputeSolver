@@ -319,8 +319,8 @@ The `frontend/` folder contains an interactive, high-fidelity **Next.js & React 
 ---
 ## Limitations
 
--The data is used in this pipeline is generated synthetically by LLM.
--The data is just reflection how actual evidences in real world will look like 
+- The data is used in this pipeline is generated synthetically by LLM.
+- The data is just reflection how actual evidences in real world will look like 
 
 ## 🔮 Future Roadmap: The AI Dispute Assistant & Co-Pilot
 
