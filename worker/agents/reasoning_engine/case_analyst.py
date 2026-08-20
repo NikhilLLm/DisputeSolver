@@ -32,6 +32,7 @@ from worker.agents.reasoning_engine.common import (
     _get_llm_client,
     _llm_json_call,
 )
+from worker.graph.case_briefing_builder import build_case_briefing
 
 load_dotenv()
 
@@ -155,128 +156,40 @@ class CaseAnalysis(BaseModel):
 
 _SYSTEM_PROMPT = """You are an impartial dispute case analyst for financial chargebacks.
 
-Your job: Read the full case context from a Neo4j knowledge graph and produce a structured JSON analysis.
+Your job: Read the Case Briefing Sheet generated from a Neo4j knowledge graph and produce a structured JSON analysis.
+
+EVIDENCE SOURCE TIERS (Hierarchy of Truth):
+- TIER_1_TELEMETRY: Independent 3rd-party records (carrier delivery scans, processor authorization/refund logs, ARNs, 3D Secure cryptographic auth, QC inspection reports). These carry the highest evidentiary weight.
+- TIER_2_COMMUNICATION: Contemporaneous timestamped business records (customer support emails, chat logs, order receipts, accepted checkout policies).
+- TIER_3_ASSERTION: Post-dispute subjective form narratives, complaint text, and unverified statements.
 
 RULES:
-1. Extract ALL meaningful evidence points — do NOT skip any evidence or assertion.
+1. Extract ALL meaningful evidence points from the briefing — include both cardholder claims and merchant defense telemetry.
 2. For each evidence point, assign:
-   - source_tier: TIER_1_TELEMETRY (carrier scans, GPS, processor logs, 3DS, QC inspections) 
-                   TIER_2_COMMUNICATION (timestamped emails, chat transcripts, purchase records, policies)
-                   TIER_3_ASSERTION (post-dispute form narratives, unverified claims)
-   - relevance: NONE / LOW / MEDIUM / HIGH / DIRECT
+   - source_tier: TIER_1_TELEMETRY / TIER_2_COMMUNICATION / TIER_3_ASSERTION (base this strictly on the evidence document type)
+   - relevance: NONE / LOW / MEDIUM / HIGH / DIRECT (how directly does this prove/disprove the core dispute issue?)
    - supports: cardholder / merchant / neutral
-   - confidence: 0.0-1.0 (how reliable is this evidence?)
-3. Extract date-based claims that need mathematical verification (policy windows, timing gaps).
-4. Extract amount-based claims that need comparison (duplicate charges, refund amounts).
-5. Evaluate each policy clause against case facts.
-6. Identify conflicts where parties' evidence directly contradicts.
-7. State a preliminary_lean based on evidence weight, but this is advisory only.
-8. Be FAIR — do not assume either party is lying without contradictory evidence.
-9. Return ONLY valid JSON matching the schema exactly."""
+   - confidence: 0.0-1.0
+3. Extract date-based claims that need mathematical verification (e.g. email promise date vs processor refund date with promised window days, delivery date vs complaint date, cancellation date vs billing date).
+4. Extract amount-based claims that need comparison (e.g. disputed amount vs settled amount, promised refund vs processor refund amount).
+5. Evaluate each policy clause against case facts if policy clauses exist.
+6. Identify conflicts where parties' assertions directly contradict telemetry or each other.
+7. Return ONLY valid JSON matching the schema exactly."""
 
 
-def _build_context_brief(context: Dict[str, Any], config: Dict[str, Any]) -> str:
-    """Serialize the graph retrieval context into a structured text brief for the LLM."""
-    lines = []
-
-    # Case header
-    dr = context.get("dispute_reason", {})
-    lines.append(f"CASE ID: {context.get('case_id', 'unknown')}")
-    lines.append(f"DISPUTE CATEGORY: {dr.get('category', 'unknown')}")
-    lines.append(f"REASON CODE: {dr.get('reason_code', 'N/A')}")
-    lines.append(f"CANONICAL TYPE: {config.get('canonical_reason', 'UNKNOWN')}")
-    lines.append("")
-
-    # Parties
-    lines.append("PARTIES:")
-    for p in context.get("parties", []):
-        lines.append(f"  - {p.get('role', 'unknown')}: {p.get('name', 'N/A')}")
-    lines.append("")
-
-    # Entities (all hubs — universal, no label filtering)
-    entities = context.get("entities", [])
-    if entities:
-        lines.append("ENTITIES (Case Hubs):")
-        for ent in entities:
-            labels = ent.get("labels", [])
-            lines.append(f"  - [{', '.join(labels)}] {ent.get('entity_id', '?')} "
-                         f"(type: {ent.get('entity_type', '?')})")
-        lines.append("")
-
-    # Domain bridges
-    bridges = context.get("domain_bridges", [])
-    if bridges:
-        lines.append("DOMAIN BRIDGES (relationships between entities):")
-        for b in bridges:
-            lines.append(f"  - ({b['source']}) -[:{b['rel_type']}]-> ({b['target']})")
-        lines.append("")
-
-    # Evidence envelopes
-    lines.append("EVIDENCE ENVELOPES:")
-    for ev in context.get("evidence", []):
-        lines.append(f"  - [{ev.get('evidence_id', '?')}] type={ev.get('evidence_type', '?')}, "
-                     f"owner={ev.get('owner', '?')}, file={ev.get('file_name', '?')}")
-    lines.append("")
-
-    # Assertions
-    lines.append("ASSERTIONS (party claims):")
-    for ast in context.get("assertions", []):
-        lines.append(f"  - [{ast.get('assertion_id', '?')}] owner={ast.get('owner', '?')}, "
-                     f"subject={ast.get('subject', '?')}: \"{ast.get('text', '')}\"")
-        if ast.get("asserted_value_days") is not None:
-            lines.append(f"    (asserted_value_days: {ast['asserted_value_days']})")
-    lines.append("")
-
-    # FactNodes (ALL types — universal)
-    lines.append("FACT NODES (structured evidence data):")
-    for fact in context.get("facts", []):
-        ft = fact.get("fact_type", "?")
-        owner = fact.get("evidence_owner", fact.get("owner", "system"))
-        src = fact.get("source_evidence_type", "?")
-        # Serialize key properties (exclude internal metadata)
-        props = {k: v for k, v in fact.items()
-                 if k not in ("source_evidence_id", "source_evidence_type",
-                              "evidence_owner", "about_entity", "case_id")}
-        lines.append(f"  - [{ft}] owner={owner}, source={src}: {json.dumps(props, default=str)}")
-    lines.append("")
-
-    # Policy clauses
-    if context.get("policy_clauses"):
-        lines.append("POLICY CLAUSES:")
-        for clause in context["policy_clauses"]:
-            cid = clause.get("clause_id", "?")
-            lines.append(f"  - Clause {cid}: \"{clause.get('text', '')}\"")
-            if clause.get("window_days"):
-                lines.append(f"    (window_days: {clause['window_days']})")
-        lines.append("")
-
-    # Timeline events
-    if context.get("timeline_events"):
-        lines.append("TIMELINE (tracking events, chronological):")
-        for evt in context["timeline_events"]:
-            lines.append(f"  - {evt.get('timestamp', '?')}: {evt.get('status', '?')} "
-                         f"at {evt.get('location', '?')}")
-        lines.append("")
-
-    # Evaluation guidance from dispute config
-    questions = config.get("evaluation_questions", [])
-    if questions:
-        lines.append("EVALUATION QUESTIONS TO CONSIDER:")
-        for q in questions:
-            lines.append(f"  - {q}")
-
-    return "\n".join(lines)
-
-
-def _build_user_prompt(context_brief: str, config: Dict[str, Any]) -> str:
-    """Build the user prompt for the case analyst LLM call."""
+def _build_user_prompt(briefing_text: str, config: Dict[str, Any]) -> str:
+    """Build the user prompt for the case analyst LLM call using the Case Briefing Sheet."""
     canonical = config.get("canonical_reason", "UNKNOWN")
+    questions = config.get("evaluation_questions", [])
+    questions_block = ""
+    if questions:
+        questions_block = "\nEVALUATION QUESTIONS TO CONSIDER:\n" + "\n".join(f"- {q}" for q in questions) + "\n"
 
-    return f"""Analyze this dispute case and produce a structured CaseAnalysis JSON.
+    return f"""Analyze this dispute case briefing and produce a structured CaseAnalysis JSON.
 
-CASE CONTEXT:
-{context_brief}
-
+CASE BRIEFING:
+{briefing_text}
+{questions_block}
 DISPUTE TYPE: {canonical}
 
 Return a JSON object with these exact keys:
@@ -455,13 +368,13 @@ def _normalize_analysis(raw: Dict[str, Any]) -> Dict[str, Any]:
 # ==========================================================
 
 def analyze_case(
-    context: Dict[str, Any],
+    case_context_or_briefing: Dict[str, Any] | str,
     config: Dict[str, Any],
 ) -> CaseAnalysis:
     """Run the LLM Case Analyst — Stage 2 of the reasoning pipeline.
 
     Args:
-        context: Graph retrieval context dict from Stage 1.
+        case_context_or_briefing: Case Briefing Sheet (Markdown str) or raw graph context dict.
         config: Dispute configuration from dispute_config.py.
 
     Returns:
@@ -469,13 +382,18 @@ def analyze_case(
     """
     client = _get_llm_client()
 
-    # Build the case brief from graph context
-    context_brief = _build_context_brief(context, config)
+    # Get clean briefing sheet
+    if isinstance(case_context_or_briefing, str):
+        briefing_text = case_context_or_briefing
+        case_id_hint = "unknown"
+    else:
+        briefing_text = build_case_briefing(case_context_or_briefing)
+        case_id_hint = case_context_or_briefing.get("case_id", "unknown")
 
     # Single LLM call
     print("  [LLM] Calling case analyst...")
     start = time.time()
-    raw_result = _llm_json_call(client, _SYSTEM_PROMPT, _build_user_prompt(context_brief, config))
+    raw_result = _llm_json_call(client, _SYSTEM_PROMPT, _build_user_prompt(briefing_text, config))
     elapsed = round(time.time() - start, 2)
     print(f"  [LLM] Case analyst responded in {elapsed}s")
 
@@ -487,11 +405,11 @@ def analyze_case(
         analysis = CaseAnalysis(**normalized)
     except Exception as e:
         print(f"  [WARN] Pydantic validation failed, attempting field-by-field recovery: {e}")
-        analysis = _recover_partial_analysis(normalized, context)
+        analysis = _recover_partial_analysis(normalized, case_id_hint)
 
     # Ensure case_id is set
-    if not analysis.case_id:
-        analysis.case_id = context.get("case_id", "unknown")
+    if not analysis.case_id or analysis.case_id == "unknown":
+        analysis.case_id = case_id_hint
     if not analysis.dispute_category:
         analysis.dispute_category = config.get("canonical_reason", "UNKNOWN")
 
@@ -507,11 +425,11 @@ def analyze_case(
 
 def _recover_partial_analysis(
     raw: Dict[str, Any],
-    context: Dict[str, Any],
+    case_id_hint: str = "unknown",
 ) -> CaseAnalysis:
     """Attempt to recover a partial CaseAnalysis when full Pydantic validation fails."""
     safe = {
-        "case_id": raw.get("case_id", context.get("case_id", "unknown")),
+        "case_id": raw.get("case_id", case_id_hint),
         "dispute_category": raw.get("dispute_category", ""),
         "preliminary_lean": raw.get("preliminary_lean", "contested"),
     }

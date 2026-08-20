@@ -339,6 +339,7 @@ def get_dispute_config(dispute_reason: str) -> Dict[str, Any]:
     """
     canonical = normalize_dispute_reason(dispute_reason)
     config = DISPUTE_CONFIG.get(canonical)
+  
 
     if config is None:
         return {

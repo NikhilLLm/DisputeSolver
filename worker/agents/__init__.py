@@ -16,7 +16,12 @@ from worker.agents.dispute_config import (
     normalize_dispute_reason,
     DISPUTE_CONFIG,
 )
-from worker.agents.graph_retrieval import fetch_case_reasoning_context
+from worker.agents.graph_retrieval import (
+    fetch_case_reasoning_context,
+    query_similar_assertions,
+    query_similar_facts,
+)
+from worker.graph.case_briefing_builder import build_case_briefing
 from worker.agents.reasoning_engine import (
     analyze_case,
     run_deterministic_evaluations,
@@ -33,6 +38,9 @@ __all__ = [
     "normalize_dispute_reason",
     "DISPUTE_CONFIG",
     "fetch_case_reasoning_context",
+    "query_similar_assertions",
+    "query_similar_facts",
+    "build_case_briefing",
     "analyze_case",
     "run_deterministic_evaluations",
     "synthesize_verdict",

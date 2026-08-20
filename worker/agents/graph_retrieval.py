@@ -136,6 +136,66 @@ def fetch_case_reasoning_context(
     return context
 
 
+def query_similar_assertions(
+    query_text: str,
+    top_k: int = 5,
+    db_name: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Query Neo4j vector index for Assertions semantically similar to query_text."""
+    from worker.graph.graph_builder import _get_embedding
+    vec = _get_embedding(query_text)
+    if not vec:
+        return []
+
+    driver = _connect()
+    db = db_name or os.getenv("NEO4J_DATABASE", "neo4j")
+    results = []
+    try:
+        with driver.session(database=db) as session:
+            q = """
+            CALL db.index.vector.queryNodes('assertion_embeddings', $top_k, $vec)
+            YIELD node AS a, score
+            RETURN a.assertion_id AS id, a.subject AS subject, a.text AS text, a.owner AS owner, score
+            """
+            for record in session.run(q, {"top_k": top_k, "vec": vec}):
+                results.append(dict(record))
+    except Exception:
+        pass
+    finally:
+        driver.close()
+    return results
+
+
+def query_similar_facts(
+    query_text: str,
+    top_k: int = 5,
+    db_name: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Query Neo4j vector index for FactNodes (policies, messages) semantically similar to query_text."""
+    from worker.graph.graph_builder import _get_embedding
+    vec = _get_embedding(query_text)
+    if not vec:
+        return []
+
+    driver = _connect()
+    db = db_name or os.getenv("NEO4J_DATABASE", "neo4j")
+    results = []
+    try:
+        with driver.session(database=db) as session:
+            q = """
+            CALL db.index.vector.queryNodes('factnode_embeddings', $top_k, $vec)
+            YIELD node AS f, score
+            RETURN f.fact_id AS id, f.fact_type AS fact_type, f.text AS text, f.body AS body, f.owner AS owner, score
+            """
+            for record in session.run(q, {"top_k": top_k, "vec": vec}):
+                results.append(dict(record))
+    except Exception:
+        pass
+    finally:
+        driver.close()
+    return results
+
+
 if __name__ == "__main__":
     import json
     case = "DSP-2026-00201"

@@ -24,6 +24,7 @@ from dotenv import load_dotenv
 
 from worker.agents.dispute_config import get_dispute_config, normalize_dispute_reason
 from worker.agents.graph_retrieval import fetch_case_reasoning_context
+from worker.graph.case_briefing_builder import build_case_briefing
 from worker.agents.reasoning_engine import (
     CaseAnalysis,
     DeterministicEvaluationResult,
@@ -101,10 +102,17 @@ class DisputeReasoningOrchestrator:
             return self._error_result(case_id, "No evidence or assertions found in graph")
 
         # ==========================================================
+        # STAGE 1.5: Build Curated Case Briefing Sheet
+        # ==========================================================
+        print("\n[1.5/4] Synthesizing Case Briefing Sheet from Graph...")
+        briefing_sheet = build_case_briefing(context)
+        print(f"  Briefing Sheet built ({len(briefing_sheet.splitlines())} lines)")
+
+        # ==========================================================
         # STAGE 2: LLM Case Analyst (1 Constrained Call)
         # ==========================================================
-        print("\n[2/4] Running LLM Case Analyst (Single Pydantic Call)...")
-        analysis: CaseAnalysis = analyze_case(context, config)
+        print("\n[2/4] Running LLM Case Analyst on Case Briefing...")
+        analysis: CaseAnalysis = analyze_case(briefing_sheet, config)
         save_analysis(analysis)
 
         # ==========================================================
@@ -122,7 +130,7 @@ class DisputeReasoningOrchestrator:
         # Convert to dictionary and attach execution metadata
         decision_dict = verdict_pkg.model_dump(mode="json")
         elapsed = round(time.time() - start_time, 2)
-        decision_dict["pipeline"] = "lean_hybrid_reasoning_v2"
+        decision_dict["pipeline"] = "lean_hybrid_reasoning_v3"
         decision_dict["execution_time_seconds"] = elapsed
         decision_dict["run_at"] = datetime.now(timezone.utc).isoformat()
 
