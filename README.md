@@ -234,15 +234,16 @@ flowchart LR
 
 ## 📊 Supported Dispute Categories & Card Networks
 
-| Dispute Category |
-|---|---|---|---|---|
-| **Product / Service Not Received** | 
-| **Not as Described / Quality** | 
-| **Fraud / Unauthorized** | 
-| **Duplicate Processing** | 
-| **Credit Not Processed** | 
-| **Canceled Subscription** | 
-| **Incorrect Amount / Currency** | 
+| Dispute Category              |
+|-------------------------------|
+| Product / Service Not Received|
+| Not as Described / Quality    |
+| Fraud / Unauthorized          |
+| Duplicate Processing          |
+| Credit Not Processed          |
+| Canceled Subscription         |
+| Incorrect Amount / Currency   |
+
 
 ---
 
