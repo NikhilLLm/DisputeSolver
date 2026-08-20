@@ -234,15 +234,15 @@ flowchart LR
 
 ## 📊 Supported Dispute Categories & Card Networks
 
-| Dispute Category | Visa | Mastercard | American Express | Discover |
+| Dispute Category |
 |---|---|---|---|---|
-| **Product / Service Not Received** | `13.1` | `4855` | `C08` | `RG` |
-| **Not as Described / Quality** | `13.3` | `4853` | `C31` | `RM` |
-| **Fraud / Unauthorized** | `10.4` | `4837` | `F29` | `UA01-UA05` |
-| **Duplicate Processing** | `12.6.1` | `4834` | `P05` | `DP` |
-| **Credit Not Processed** | `13.6` | `4860` | `C05` | `RN` |
-| **Canceled Subscription** | `13.2` | `4841` | `C28` | `RM3` |
-| **Incorrect Amount / Currency** | `12.2 / 12.5` | `4831` | `P04` | `AT` |
+| **Product / Service Not Received** | 
+| **Not as Described / Quality** | 
+| **Fraud / Unauthorized** | 
+| **Duplicate Processing** | 
+| **Credit Not Processed** | 
+| **Canceled Subscription** | 
+| **Incorrect Amount / Currency** | 
 
 ---
 
