@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { scenarios, type Scenario, type Evidence } from '@/data/scenarios'
+import { caseService, type BackendDecision } from '@/services/case-service'
 
 const cx = (...classes: Array<string | false | undefined>) => classes.filter(Boolean).join(' ')
 
@@ -53,41 +54,97 @@ type ChatMessage = {
 }
 
 // Generate grounded response for the AI Graph Chat Assistant based on scenario context
-function generateGraphAiResponse(query: string, scenario: Scenario): { text: string; highlights: string[] } {
+// When a real backend decision is available, it enriches the responses with actual pipeline data
+function generateGraphAiResponse(query: string, scenario: Scenario, decision?: BackendDecision): { text: string; highlights: string[] } {
   const q = query.toLowerCase()
 
+  // --- LIVE BACKEND PATH (when decision data is available) ---
+  if (decision) {
+    const dm = decision.deterministic_metrics
+
+    if (q.includes('why') || q.includes('reason') || q.includes('verdict') || q.includes('favor') || q.includes('win') || q.includes('decision')) {
+      const stmts = decision.reasoning_statements
+        .map((r) => `• [${r.source_tier.replace('TIER_', 'T').replace('_TELEMETRY','1').replace('_COMMUNICATION','2').replace('_ASSERTION','3')} | ${r.supports.toUpperCase()} | w=${r.weight.toFixed(3)}] ${r.statement}`)
+        .join('\n')
+      return {
+        text: `Backend Verdict: ${decision.verdict} (${(decision.confidence_score * 100).toFixed(1)}% · ${decision.confidence_band.replace(/_/g, ' ')})\n\nPrimary Reason: ${decision.primary_reason}\n\nAll ${decision.reasoning_statements.length} Evidence Points Evaluated:\n${stmts}\n\nExecutive Summary:\n${decision.executive_summary}`,
+        highlights: [decision.verdict, `${(decision.confidence_score * 100).toFixed(1)}%`],
+      }
+    }
+
+    if (q.includes('score') || q.includes('metric') || q.includes('percentage') || q.includes('weight') || q.includes('deterministic') || q.includes('calculation')) {
+      return {
+        text: `Deterministic Scoring Breakdown (Pipeline: ${decision.pipeline}):\n\n▸ Cardholder Score: ${dm.cardholder_score.toFixed(4)} → ${dm.cardholder_pct}\n▸ Merchant Score: ${dm.merchant_score.toFixed(4)} → ${dm.merchant_pct}\n▸ Net Direction: ${dm.net_direction}\n▸ Date Verifications Run: ${dm.date_verifications_count}\n▸ Amount Verifications Run: ${dm.amount_verifications_count}\n▸ Misstatements Detected: ${dm.misstatements_detected}\n\nExecution Time: ${decision.execution_time_seconds?.toFixed(2) ?? 'N/A'}s\nRun At: ${decision.run_at ?? 'N/A'}`,
+        highlights: [dm.merchant_pct, dm.cardholder_pct, dm.net_direction],
+      }
+    }
+
+    if (q.includes('evidence') || q.includes('tier') || q.includes('telemetry') || q.includes('document') || q.includes('statement')) {
+      const byTier = (tier: string) => decision.reasoning_statements.filter((r) => r.source_tier === tier)
+      const t1 = byTier('TIER_1_TELEMETRY').map((r) => `  [${r.supports.toUpperCase()}] ${r.statement} (w=${r.weight.toFixed(3)})`).join('\n')
+      const t2 = byTier('TIER_2_COMMUNICATION').map((r) => `  [${r.supports.toUpperCase()}] ${r.statement} (w=${r.weight.toFixed(3)})`).join('\n')
+      const t3 = byTier('TIER_3_ASSERTION').map((r) => `  [${r.supports.toUpperCase()}] ${r.statement} (w=${r.weight.toFixed(3)})`).join('\n')
+      return {
+        text: `Evidentiary Hierarchy Audit (from actual pipeline output):\n\nTier 1 — Tamper-Resistant Telemetry (×1.0 multiplier):\n${t1 || '  (none)\n'}\nTier 2 — Communication Records (×0.7 multiplier):\n${t2 || '  (none)\n'}\nTier 3 — Subjective Assertions (×0.35 multiplier):\n${t3 || '  (none)'}`,
+        highlights: ['Tier 1 Telemetry', 'Tier 2 Record', 'Tier 3 Assertion'],
+      }
+    }
+
+    if (q.includes('counter') || q.includes('rebuttal') || q.includes('addressed') || q.includes('argument')) {
+      const cas = decision.counterarguments_addressed.map((ca, i) => `${i + 1}. ${ca}`).join('\n\n')
+      return {
+        text: `Counterarguments Addressed by the Pipeline:\n\n${cas || 'No counterarguments documented for this case.'}`,
+        highlights: [],
+      }
+    }
+
+    if (q.includes('policy') || q.includes('rule') || q.includes('basis') || q.includes('code') || q.includes('scheme')) {
+      return {
+        text: `Policy & Regulatory Basis:\n\n${decision.policy_basis}\n\nReason Code: ${scenario.reasonCode} (${scenario.category})\nCase ID: ${decision.case_id}`,
+        highlights: [scenario.reasonCode, scenario.category],
+      }
+    }
+
+    // General fallback when decision is available
+    return {
+      text: `Live Pipeline Summary for Case ${decision.case_id}:\n\nVerdict: ${decision.verdict} | Confidence: ${(decision.confidence_score * 100).toFixed(1)}%\n\n${decision.executive_summary}\n\nYou can ask about: verdict reasoning, deterministic scores, evidence tiers, counterarguments, or policy basis.`,
+      highlights: [decision.verdict, `${(decision.confidence_score * 100).toFixed(1)}%`],
+    }
+  }
+
+  // --- SCENARIO FALLBACK PATH (no backend decision available) ---
   if (q.includes('node') || q.includes('graph') || q.includes('topology') || q.includes('relation')) {
     const nodeNames = scenario.graph.nodes.map((n) => `${n.label} (${n.kind})`).join(', ')
     return {
-      text: `The 5-Layer Knowledge Graph for Case ${scenario.caseId} contains ${scenario.graph.nodes.length} connected entities and ${scenario.graph.edges.length} directed relational bridges:\n\n• Nodes: ${nodeNames}\n\nThis graph structures raw document extractions into a topological representation where carrier telemetry, policy terms, and parties are linked deterministically.`,
+      text: `The 5-Layer Knowledge Graph for Case ${scenario.caseId} contains ${scenario.graph.nodes.length} connected entities and ${scenario.graph.edges.length} directed relational bridges:\n\n▸ Nodes: ${nodeNames}\n\nThis graph structures raw document extractions into a topological representation where carrier telemetry, policy terms, and parties are linked deterministically.`,
       highlights: scenario.graph.nodes.map((n) => n.label),
     }
   }
 
   if (q.includes('why') || q.includes('reason') || q.includes('verdict') || q.includes('favor') || q.includes('win') || q.includes('decision')) {
     return {
-      text: `AI Recommendation: ${scenario.decision.outcome} (${scenario.decision.confidence} confidence).\n\nPrimary Decisive Factor: ${scenario.decision.primaryReason || scenario.decision.summary}\n\nEvidence Evaluation:\n${scenario.reasoning.signals.map((s) => `• ${s}`).join('\n')}`,
+      text: `AI Recommendation: ${scenario.decision.outcome} (${scenario.decision.confidence} confidence).\n\nPrimary Decisive Factor: ${scenario.decision.primaryReason || scenario.decision.summary}\n\nEvidence Evaluation:\n${scenario.reasoning.signals.map((s) => `▸ ${s}`).join('\n')}`,
       highlights: [scenario.decision.outcome, scenario.decision.confidence],
     }
   }
 
   if (q.includes('date') || q.includes('timeline') || q.includes('gap') || q.includes('sla') || q.includes('time')) {
     return {
-      text: `Timeline & SLA Audit for Case ${scenario.caseId}:\n\n• Transaction Date: ${scenario.date}\n• Resolution Cycle: ${scenario.resolutionTime.cycleDays} Days (vs ${scenario.resolutionTime.industryBaselineDays}d Industry SLA)\n• Time Saved: ${scenario.resolutionTime.timeSavedDays} Days (${scenario.resolutionTime.reductionPct} efficiency gain)\n• AI Processing Latency: ${scenario.resolutionTime.aiLatencySeconds}s\n\nAll date claims were verified against card scheme regulations.`,
+      text: `Timeline & SLA Audit for Case ${scenario.caseId}:\n\n▸ Transaction Date: ${scenario.date}\n▸ Resolution Cycle: ${scenario.resolutionTime.cycleDays} Days (vs ${scenario.resolutionTime.industryBaselineDays}d Industry SLA)\n▸ Time Saved: ${scenario.resolutionTime.timeSavedDays} Days (${scenario.resolutionTime.reductionPct} efficiency gain)\n▸ AI Processing Latency: ${scenario.resolutionTime.aiLatencySeconds}s\n\nAll date claims were verified against card scheme regulations.`,
       highlights: [`${scenario.resolutionTime.cycleDays} Days Resolution`, `${scenario.resolutionTime.timeSavedDays} Days Saved`],
     }
   }
 
   if (q.includes('policy') || q.includes('rule') || q.includes('scheme') || q.includes('visa') || q.includes('mastercard')) {
     return {
-      text: `Applicable Dispute Policy & Rules:\n\n• Reason Code: ${scenario.reasonCode} (${scenario.category})\n• Governing Basis: ${scenario.decision.policyBasis || 'Card Scheme Dispute Regulations'}\n• Core Evaluation: "${scenario.reasoning.question}"`,
+      text: `Applicable Dispute Policy & Rules:\n\n▸ Reason Code: ${scenario.reasonCode} (${scenario.category})\n▸ Governing Basis: ${scenario.decision.policyBasis || 'Card Scheme Dispute Regulations'}\n▸ Core Evaluation: "${scenario.reasoning.question}"`,
       highlights: [scenario.reasonCode, scenario.category],
     }
   }
 
   if (q.includes('telemetry') || q.includes('evidence') || q.includes('tier') || q.includes('document')) {
-    const customerDocs = scenario.customerEvidence.map((e) => `• [${e.tier?.replace('TIER_', 'Tier ') || 'Tier 2'}]: ${e.name} — ${e.detail}`).join('\n')
-    const merchantDocs = scenario.merchantEvidence.map((e) => `• [${e.tier?.replace('TIER_', 'Tier ') || 'Tier 2'}]: ${e.name} — ${e.detail}`).join('\n')
+    const customerDocs = scenario.customerEvidence.map((e) => `▸ [${e.tier?.replace('TIER_', 'Tier ') || 'Tier 2'}]: ${e.name} — ${e.detail}`).join('\n')
+    const merchantDocs = scenario.merchantEvidence.map((e) => `▸ [${e.tier?.replace('TIER_', 'Tier ') || 'Tier 2'}]: ${e.name} — ${e.detail}`).join('\n')
     return {
       text: `Evidentiary Hierarchy Audit:\n\nCardholder Evidence:\n${customerDocs}\n\nMerchant Defense Records:\n${merchantDocs}\n\nTier-1 Telemetry (tamper-resistant 3rd-party data) is weighted at 1.0, Tier-2 Records at 0.7, and Tier-3 Assertions at 0.35 in our deterministic formula.`,
       highlights: ['Tier 1 Telemetry', 'Tier 2 Record', 'Tier 3 Assertion'],
@@ -96,7 +153,7 @@ function generateGraphAiResponse(query: string, scenario: Scenario): { text: str
 
   // Fallback grounded answer
   return {
-    text: `Analysis for Case ${scenario.caseId} (${scenario.category}):\n\n${scenario.decision.summary}\n\nKey Supporting Factors:\n${scenario.decision.factors.map((f) => `• ${f}`).join('\n')}\n\nYou can query graph nodes, date gap checks, evidence tiers, or policy reason codes.`,
+    text: `Analysis for Case ${scenario.caseId} (${scenario.category}):\n\n${scenario.decision.summary}\n\nKey Supporting Factors:\n${scenario.decision.factors.map((f) => `▸ ${f}`).join('\n')}\n\nYou can query graph nodes, date gap checks, evidence tiers, or policy reason codes. Start the backend on port 8000 for live reasoning data.`,
     highlights: scenario.decision.factors,
   }
 }
@@ -133,6 +190,9 @@ export function AnalystDashboard({
   const [showOverrideModal, setShowOverrideModal] = useState(false)
   const [overrideOutcome, setOverrideOutcome] = useState('Cardholder Refund (Manual Override)')
   const [overrideNote, setOverrideNote] = useState('')
+
+  // Backend decision cache (keyed by caseId)
+  const [caseDecisions, setCaseDecisions] = useState<Record<string, BackendDecision>>({})
 
   // Graph Chat Assistant state
   const [chatMessages, setChatMessages] = useState<Record<string, ChatMessage[]>>({})
@@ -214,10 +274,13 @@ export function AnalystDashboard({
   const currentChat = useMemo(() => {
     if (!selectedCaseId) return []
     if (!chatMessages[selectedCaseId]) {
+      const backendDecision = selectedScenario ? caseDecisions[selectedScenario.caseId] : undefined
       const initial: ChatMessage = {
         id: 'init-1',
         sender: 'ai',
-        text: `Hello Analyst. I have mapped the 5-layer Knowledge Graph for Case ${selectedScenario?.caseId}. I can explain our deterministic weighting, query graph relationships, or verify specific evidence tiers. What would you like to investigate?`,
+        text: backendDecision
+          ? `Hello Analyst. Live backend pipeline data is loaded for Case ${selectedScenario?.caseId} (Pipeline: ${backendDecision.pipeline}, Verdict: ${backendDecision.verdict}, Confidence: ${(backendDecision.confidence_score * 100).toFixed(1)}%). I can walk you through exact reasoning statements with weights, deterministic scores, counterarguments, or policy basis from the actual run.`
+          : `Hello Analyst. I have mapped the 5-layer Knowledge Graph for Case ${selectedScenario?.caseId}. Start the backend on port 8000 for live reasoning data. I can explain graph relationships, evidence tiers, and scenario data in the meantime.`,
         timestamp: 'Just now',
       }
       return [initial]
@@ -226,12 +289,12 @@ export function AnalystDashboard({
   }, [selectedCaseId, chatMessages, selectedScenario])
 
   // Handle Send Chat
-  const handleSendChat = (textToSend?: string) => {
+  const handleSendChat = async (textToSend?: string) => {
     const query = (textToSend || chatInput).trim()
     if (!query || !selectedScenario || !selectedCaseId) return
 
     const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
+      id: 'user-' + Date.now(),
       sender: 'analyst',
       text: query,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -242,10 +305,12 @@ export function AnalystDashboard({
     setChatInput('')
     setIsTyping(true)
 
-    setTimeout(() => {
-      const response = generateGraphAiResponse(query, selectedScenario)
+    try {
+      const copilotRes = await caseService.askCopilot(selectedScenario.caseId, query)
+      const response = copilotRes || generateGraphAiResponse(query, selectedScenario, caseDecisions[selectedScenario.caseId])
+      
       const aiMsg: ChatMessage = {
-        id: `ai-${Date.now()}`,
+        id: 'ai-' + Date.now(),
         sender: 'ai',
         text: response.text,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -255,8 +320,22 @@ export function AnalystDashboard({
         ...prev,
         [selectedCaseId]: [...(prev[selectedCaseId] || updated), aiMsg],
       }))
+    } catch {
+      const response = generateGraphAiResponse(query, selectedScenario, caseDecisions[selectedScenario.caseId])
+      const aiMsg: ChatMessage = {
+        id: 'ai-' + Date.now(),
+        sender: 'ai',
+        text: response.text,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        highlights: response.highlights,
+      }
+      setChatMessages((prev) => ({
+        ...prev,
+        [selectedCaseId]: [...(prev[selectedCaseId] || updated), aiMsg],
+      }))
+    } finally {
       setIsTyping(false)
-    }, 600)
+    }
   }
 
   return (
@@ -398,7 +477,14 @@ export function AnalystDashboard({
                   return (
                     <tr
                       key={item.id}
-                      onClick={() => setSelectedCaseId(item.id)}
+                      onClick={() => {
+                        setSelectedCaseId(item.id)
+                        if (!caseDecisions[item.caseId]) {
+                          caseService.getDecision(item.caseId).then((dec) => {
+                            if (dec) setCaseDecisions((prev) => ({ ...prev, [item.caseId]: dec }))
+                          })
+                        }
+                      }}
                       className={cx(
                         'cursor-pointer transition-colors hover:bg-muted/30',
                         isSelected && 'bg-primary/5 dark:bg-primary/10'

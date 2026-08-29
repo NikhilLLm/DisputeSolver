@@ -1,8 +1,9 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
+  Loader2,
   AlertTriangle,
   ArrowRight,
   Bot,
@@ -26,7 +27,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getScenario, initialTimeline, scenarios, type Evidence, type TimelineEvent } from '@/data/scenarios'
-import { caseService } from '@/services/case-service'
+import { caseService, type BackendDecision } from '@/services/case-service'
 
 const cx = (...classes: Array<string | false | undefined>) => classes.filter(Boolean).join(' ')
 
@@ -201,8 +202,10 @@ export function DisputePlayground({
   const [merchantEvidence, setMerchantEvidence] = useState<string[]>(scenario.merchantEvidence.map((e) => e.id))
   const [customerSubmitted, setCustomerSubmitted] = useState(false)
   const [merchantSubmitted, setMerchantSubmitted] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [detail, setDetail] = useState<'reasoning' | 'graph' | null>('reasoning')
   const [pipelineStage, setPipelineStage] = useState(0)
+  const [liveDecision, setLiveDecision] = useState<BackendDecision | null>(null)
 
   // Stagger pipeline stages after merchant submits for visual pacing
   useEffect(() => {
@@ -224,7 +227,7 @@ export function DisputePlayground({
       next[2] = { label: 'Merchant defense', detail: `Telemetry & ${scenario.merchantEvidence.length} records submitted`, status: 'complete' }
       next[3] = {
         label: 'AI investigation',
-        detail: pipelineStage >= 1 ? '5-layer graph & deterministic checks verified' : 'Analyzing evidence graph…',
+        detail: pipelineStage >= 1 ? '5-layer graph & deterministic checks verified' : 'Analyzing evidence graphâ€¦',
         status: pipelineStage >= 1 ? 'complete' : 'current',
       }
       next[4] = {
@@ -245,6 +248,7 @@ export function DisputePlayground({
     setMerchantEvidence(next.merchantEvidence.map((e) => e.id))
     setCustomerSubmitted(false)
     setMerchantSubmitted(false)
+    setIsSubmitting(false)
     setDetail('reasoning')
     setPipelineStage(0)
   }
@@ -294,7 +298,7 @@ export function DisputePlayground({
             >
               {scenarios.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.label} ({item.amount}) — {item.caseId}
+                  {item.label} ({item.amount}) â€” {item.caseId}
                 </option>
               ))}
             </select>
@@ -353,7 +357,7 @@ export function DisputePlayground({
             </div>
             <div className="flex items-center gap-2">
               <CreditCard className="size-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground">Order Ref: {scenario.orderId} · Date: {scenario.date}</span>
+              <span className="text-muted-foreground">Order Ref: {scenario.orderId} Â· Date: {scenario.date}</span>
             </div>
           </div>
         </div>
@@ -559,7 +563,7 @@ export function DisputePlayground({
                     <Button
                       variant="secondary"
                       className="w-full gap-2 font-semibold shadow-xs"
-                      disabled={merchantSubmitted || merchantEvidence.length < scenario.merchantEvidence.length}
+                      disabled={merchantSubmitted || isSubmitting || merchantEvidence.length < scenario.merchantEvidence.length}
                       onClick={async () => {
                         await caseService.submitMerchant({
                           scenarioId,
@@ -570,7 +574,12 @@ export function DisputePlayground({
                         setMerchantSubmitted(true)
                       }}
                     >
-                      {merchantSubmitted ? (
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin text-primary" />
+                          2. Executing AI Pipeline (OCR &rarr; Neo4j &rarr; Reasoning)...
+                        </>
+                      ) : merchantSubmitted ? (
                         <>
                           <Check className="size-4" /> 2. Defense Submitted & Evaluated
                         </>
@@ -630,8 +639,59 @@ export function DisputePlayground({
         </div>
 
         {/* 3. AI Resolution & Scoring Center */}
-        {merchantSubmitted && pipelineStage >= 3 && (
+        {merchantSubmitted && pipelineStage >= 3 && (() => {
+          // Build a unified display object: liveDecision fields take priority, fall back to scenario
+          const verdictLabel = liveDecision
+            ? liveDecision.verdict === 'MERCHANT'
+              ? 'Merchant Wins — Dispute Denied'
+              : liveDecision.verdict === 'CARDHOLDER'
+              ? 'Cardholder Wins — Refund Granted'
+              : 'Insufficient Evidence — Case Escalated'
+            : scenario.decision.outcome
+
+          const confidenceLabel = liveDecision
+            ? `${(liveDecision.confidence_score * 100).toFixed(1)}%`
+            : scenario.decision.confidence
+
+          const summaryText = liveDecision
+            ? liveDecision.executive_summary
+            : scenario.decision.summary
+
+          const primaryReason = liveDecision
+            ? liveDecision.primary_reason
+            : scenario.decision.primaryReason || scenario.decision.summary
+
+          const policyBasis = liveDecision
+            ? liveDecision.policy_basis
+            : scenario.decision.policyBasis || 'Card Scheme Dispute Regulations'
+
+          const factors = liveDecision
+            ? liveDecision.reasoning_statements.slice(0, 3).map((r) => r.statement)
+            : scenario.decision.factors
+
+          const signals = liveDecision
+            ? liveDecision.reasoning_statements.map((r) => `[${r.source_tier.replace('TIER_', 'Tier ').replace('_', ' ')} · ${r.supports.toUpperCase()} · weight ${r.weight.toFixed(3)}] ${r.statement}`)
+            : scenario.reasoning.signals
+
+          const counterargs = liveDecision?.counterarguments_addressed ?? []
+          const dm = liveDecision?.deterministic_metrics ?? null
+          const isLive = !!liveDecision
+
+          return (
           <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm" style={{ animation: 'fadeSlideIn 0.5s ease-out' }}>
+            {/* Data source badge */}
+            {isLive && (
+              <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[11px] font-semibold text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                Live Backend Decision — Pipeline: {liveDecision!.pipeline}
+                {liveDecision!.execution_time_seconds && (
+                  <span className="ml-auto font-normal text-emerald-700 dark:text-emerald-400">
+                    Executed in {liveDecision!.execution_time_seconds.toFixed(2)}s
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Header */}
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between border-b border-border pb-5">
               <div>
@@ -643,27 +703,70 @@ export function DisputePlayground({
                     Case {scenario.caseId}
                   </span>
                   <span className="rounded-md bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-                    ⚡ {scenario.resolutionTime.cycleDays} Days Resolution ({scenario.resolutionTime.timeSavedDays} Days Saved vs {scenario.resolutionTime.industryBaselineDays}d Industry SLA)
+                    ⏱ {scenario.resolutionTime.cycleDays} Days Resolution ({scenario.resolutionTime.timeSavedDays} Days Saved vs {scenario.resolutionTime.industryBaselineDays}d Industry SLA)
                   </span>
+                  {isLive && (
+                    <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
+                      {liveDecision!.confidence_band.replace(/_/g, ' ')}
+                    </span>
+                  )}
                 </div>
-                <h2 className="mt-1 text-2xl font-bold tracking-tight text-foreground">{scenario.decision.outcome}</h2>
-                <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">{scenario.decision.summary}</p>
+                <h2 className="mt-1 text-2xl font-bold tracking-tight text-foreground">{verdictLabel}</h2>
+                <p className="mt-1 max-w-3xl text-xs leading-5 text-muted-foreground">{summaryText}</p>
               </div>
 
-              <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-5 py-3 dark:border-emerald-900/40 dark:bg-emerald-950/40">
-                <Sparkles className="size-5 text-emerald-600 dark:text-emerald-400" />
+              <div className={`flex items-center gap-3 rounded-2xl border px-5 py-3 ${
+                isLive && liveDecision!.confidence_score >= 0.75
+                  ? 'border-emerald-200 bg-emerald-50/80 dark:border-emerald-900/40 dark:bg-emerald-950/40'
+                  : isLive && liveDecision!.confidence_score < 0.6
+                  ? 'border-amber-200 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/40'
+                  : 'border-emerald-200 bg-emerald-50/80 dark:border-emerald-900/40 dark:bg-emerald-950/40'
+              }`}>
+                <Sparkles className={`size-5 ${
+                  isLive && liveDecision!.confidence_score < 0.6
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-emerald-600 dark:text-emerald-400'
+                }`} />
                 <div>
-                  <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">Confidence Score</p>
-                  <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{scenario.decision.confidence}</p>
+                  <p className="text-[11px] font-semibold text-muted-foreground">Confidence Score</p>
+                  <p className="text-2xl font-bold text-foreground">{confidenceLabel}</p>
                 </div>
               </div>
             </div>
 
+            {/* Deterministic Metrics Row — only shown when live backend data exists */}
+            {isLive && dm && (
+              <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-border bg-muted/30 p-4 text-xs sm:grid-cols-5">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Cardholder Score</span>
+                  <span className="text-sm font-bold text-foreground">{dm.cardholder_pct}</span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Merchant Score</span>
+                  <span className="text-sm font-bold text-foreground">{dm.merchant_pct}</span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Date Checks</span>
+                  <span className="text-sm font-bold text-foreground">{dm.date_verifications_count}</span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Amount Checks</span>
+                  <span className="text-sm font-bold text-foreground">{dm.amount_verifications_count}</span>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Misstatements</span>
+                  <span className={`text-sm font-bold ${dm.misstatements_detected > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                    {dm.misstatements_detected}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Key Factors */}
             <div className="mt-5 grid gap-3 md:grid-cols-3">
-              {scenario.decision.factors.map((factor) => (
+              {factors.map((factor, i) => (
                 <div
-                  key={factor}
+                  key={i}
                   className="flex items-start gap-2.5 rounded-xl border border-border/60 bg-muted/40 p-3 text-xs leading-5"
                 >
                   <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" />
@@ -681,7 +784,7 @@ export function DisputePlayground({
                 className="gap-1.5 text-xs"
               >
                 <Sparkles className="size-3.5" />
-                Tri-Agent Reasoning Breakdown
+                {isLive ? 'Backend Reasoning Statements' : 'Tri-Agent Reasoning Breakdown'}
                 <ChevronDown className={cx('size-3.5 transition-transform', detail === 'reasoning' && 'rotate-180')} />
               </Button>
 
@@ -699,30 +802,69 @@ export function DisputePlayground({
 
             {/* Reasoning Drawer */}
             {detail === 'reasoning' && (
-              <div className="mt-4 grid gap-4 rounded-xl border border-border bg-muted/30 p-5 md:grid-cols-2 text-xs">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Core Dispute Question</p>
-                  <p className="mt-1 text-foreground leading-5">{scenario.reasoning.question}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Primary Decisive Reason</p>
-                  <p className="mt-1 text-foreground leading-5">{scenario.decision.primaryReason || scenario.decision.summary}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Evaluation Signals</p>
-                  <ul className="mt-1 flex flex-col gap-1 text-muted-foreground leading-5">
-                    {scenario.reasoning.signals.map((item) => (
-                      <li key={item} className="flex items-start gap-1.5">
-                        <span className="text-primary">•</span>
-                        <span>{item}</span>
-                      </li>
+              <div className="mt-4 rounded-xl border border-border bg-muted/30 p-5 text-xs">
+                {isLive ? (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                      Reasoning Statements ({liveDecision!.reasoning_statements.length} evidence points evaluated)
+                    </p>
+                    {liveDecision!.reasoning_statements.map((r, i) => (
+                      <div key={i} className="flex items-start gap-3 rounded-lg border border-border/50 bg-card p-3">
+                        <span className={`mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase ${
+                          r.supports === 'merchant' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                        }`}>
+                          {r.supports}
+                        </span>
+                        <div className="flex-1">
+                          <p className="leading-5 text-foreground">{r.statement}</p>
+                          <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
+                            <span>{r.source_tier.replace('TIER_', 'Tier ').replace('_', ' ')}</span>
+                            <span>·</span>
+                            <span>Weight: <strong className="text-foreground">{r.weight.toFixed(4)}</strong></span>
+                          </div>
+                        </div>
+                      </div>
                     ))}
-                  </ul>
-                </div>
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Policy & Rule Basis</p>
-                  <p className="mt-1 text-foreground leading-5">{scenario.decision.policyBasis || 'Card Scheme Dispute Regulations'}</p>
-                </div>
+                    {counterargs.length > 0 && (
+                      <div className="mt-2 rounded-lg border border-border/50 bg-card p-3">
+                        <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-primary">Counterarguments Addressed</p>
+                        {counterargs.map((ca, i) => (
+                          <p key={i} className="leading-5 text-muted-foreground">{ca}</p>
+                        ))}
+                      </div>
+                    )}
+                    <div className="rounded-lg border border-border/50 bg-card p-3">
+                      <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-primary">Policy & Rule Basis</p>
+                      <p className="leading-5 text-foreground">{policyBasis}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Core Dispute Question</p>
+                      <p className="mt-1 text-foreground leading-5">{scenario.reasoning.question}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Primary Decisive Reason</p>
+                      <p className="mt-1 text-foreground leading-5">{primaryReason}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Evaluation Signals</p>
+                      <ul className="mt-1 flex flex-col gap-1 text-muted-foreground leading-5">
+                        {signals.map((item, i) => (
+                          <li key={i} className="flex items-start gap-1.5">
+                            <span className="text-primary">▸</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Policy & Rule Basis</p>
+                      <p className="mt-1 text-foreground leading-5">{policyBasis}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -748,7 +890,8 @@ export function DisputePlayground({
               </div>
             )}
           </section>
-        )}
+          )
+        })()}
       </div>
     </main>
   )
