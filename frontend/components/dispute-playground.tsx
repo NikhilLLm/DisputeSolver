@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle,
   AlertTriangle,
@@ -17,13 +17,16 @@ import {
   Landmark,
   Layers,
   Loader2,
+  MessageSquare,
   Plus,
   RotateCcw,
   Send,
   ShieldCheck,
   Sparkles,
+  UserCheck,
   UserRound,
   WalletCards,
+  XCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getScenario, initialTimeline, scenarios, type Evidence, type TimelineEvent } from '@/data/scenarios'
@@ -186,12 +189,407 @@ function Timeline({ events }: { events: TimelineEvent[] }) {
   )
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ANALYST INVESTIGATION PANEL — inline sub-components
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Shape of a single message in the analyst copilot chat */
+type ChatMsg = {
+  id: string
+  sender: 'user' | 'ai'
+  text: string
+  timestamp: string
+}
+
+/** Pre-populated query suggestions to accelerate analyst investigation */
+const QUICK_INQUIRIES = [
+  'Why did this verdict win?',
+  'What tier of evidence was most decisive?',
+  'Were there any contradictions in the evidence?',
+  'What is the policy basis for this decision?',
+  'How were the deterministic scores calculated?',
+]
+
+/** Renders a single chat bubble — either analyst (user) or AI side */
+function AnalystChatMessage({ msg }: { msg: ChatMsg }) {
+  const isUser = msg.sender === 'user'
+  return (
+    <div className={cx('flex gap-2', isUser && 'flex-row-reverse')}>
+      {/* Avatar */}
+      <span
+        className={cx(
+          'mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-xl text-white',
+          isUser ? 'bg-primary' : 'bg-indigo-600'
+        )}
+      >
+        {isUser ? <UserCheck className="size-3.5" /> : <ShieldCheck className="size-3.5" />}
+      </span>
+
+      {/* Bubble */}
+      <div
+        className={cx(
+          'max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-5',
+          isUser
+            ? 'rounded-tr-none bg-primary text-primary-foreground'
+            : 'rounded-tl-none border border-border bg-muted/50 text-foreground'
+        )}
+      >
+        <p className="whitespace-pre-wrap">{msg.text}</p>
+        <p
+          className={cx(
+            'mt-1 text-[10px]',
+            isUser ? 'text-primary-foreground/60' : 'text-muted-foreground'
+          )}
+        >
+          {msg.timestamp}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Fixed-height scrollable copilot chat panel.
+ * Queries POST /api/copilot/chat and renders grounded graph-RAG responses.
+ */
+function AnalystCopilotChat({
+  caseId,
+  liveDecision,
+  onOverride,
+}: {
+  caseId: string
+  liveDecision: BackendDecision | null
+  onOverride: (note: string) => void
+}) {
+  const [messages, setMessages] = useState<ChatMsg[]>([
+    {
+      id: 'init',
+      sender: 'ai',
+      text: liveDecision
+        ? `Case ${caseId} pipeline data loaded (${liveDecision.pipeline}).\n\nVerdict: ${liveDecision.verdict} — ${(liveDecision.confidence_score * 100).toFixed(1)}% confidence.\n\nAsk me anything about the live Knowledge Graph, evidence tiers, deterministic scores, or policy basis.`
+        : `Case ${caseId} graph is active. Ask me anything about the evidence hierarchy, relational bridges, or dispute reasoning.`,
+      timestamp: 'Just now',
+    },
+  ])
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [overrideMode, setOverrideMode] = useState(false)
+  const [overrideNote, setOverrideNote] = useState('')
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const sendMessage = async (query: string) => {
+    if (!query.trim() || isLoading) return
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+    const userMsg: ChatMsg = { id: 'u-' + Date.now(), sender: 'user', text: query, timestamp: now }
+    setMessages((prev) => [...prev, userMsg])
+    setInput('')
+    setIsLoading(true)
+
+    try {
+      const res = await caseService.askCopilot(caseId, query)
+      const aiMsg: ChatMsg = {
+        id: 'ai-' + Date.now(),
+        sender: 'ai',
+        text: res?.text || 'No response from graph copilot.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }
+      setMessages((prev) => [...prev, aiMsg])
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: 'err-' + Date.now(),
+          sender: 'ai',
+          text: 'Could not reach the backend copilot. Make sure the server is running on port 8000.',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="mt-5 rounded-2xl border border-indigo-200/80 bg-indigo-50/30 dark:border-indigo-900/40 dark:bg-indigo-950/20">
+      {/* Chat header */}
+      <div className="flex items-center gap-2.5 border-b border-indigo-200/60 px-4 py-3 dark:border-indigo-900/40">
+        <span className="flex size-7 items-center justify-center rounded-xl bg-indigo-600 text-white">
+          <ShieldCheck className="size-4" />
+        </span>
+        <div>
+          <p className="text-xs font-bold text-foreground">AI Graph Copilot</p>
+          <p className="text-[10px] text-muted-foreground">Grounded in Case {caseId} · Neo4j 5-Layer Graph</p>
+        </div>
+        <span className="ml-auto flex items-center gap-1.5 rounded-lg bg-indigo-100/80 px-2 py-1 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+          <span className="size-1.5 animate-pulse rounded-full bg-indigo-500" />
+          Live Graph
+        </span>
+      </div>
+
+      {/* Quick inquiry chips */}
+      <div className="flex flex-wrap gap-1.5 border-b border-indigo-200/40 bg-white/40 px-4 py-2.5 dark:bg-indigo-950/30 dark:border-indigo-900/30">
+        <p className="w-full text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Quick Inquiries:
+        </p>
+        {QUICK_INQUIRIES.map((q) => (
+          <button
+            key={q}
+            type="button"
+            onClick={() => sendMessage(q)}
+            disabled={isLoading}
+            className="rounded-lg border border-indigo-200 bg-white px-2.5 py-1 text-[11px] font-medium text-indigo-700 transition hover:border-indigo-400 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/60"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+
+      {/* Fixed-height scrollable message list */}
+      <div className="flex h-[400px] flex-col gap-3 overflow-y-auto p-4">
+        {messages.map((msg) => (
+          <AnalystChatMessage key={msg.id} msg={msg} />
+        ))}
+        {isLoading && (
+          <div className="flex gap-2">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white">
+              <ShieldCheck className="size-3.5" />
+            </span>
+            <div className="flex items-center gap-1.5 rounded-2xl rounded-tl-none border border-border bg-muted/50 px-3.5 py-2.5">
+              <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:0ms]" />
+              <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:150ms]" />
+              <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:300ms]" />
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Override section */}
+      {overrideMode ? (
+        <div className="border-t border-indigo-200/60 bg-purple-50/50 p-4 dark:border-indigo-900/40 dark:bg-purple-950/20">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400">
+            Analyst Override Justification
+          </p>
+          <textarea
+            value={overrideNote}
+            onChange={(e) => setOverrideNote(e.target.value)}
+            placeholder="Provide your evidentiary justification for overriding the AI verdict..."
+            rows={3}
+            className="w-full resize-none rounded-xl border border-purple-300 bg-white/90 p-3 text-xs leading-5 text-foreground outline-none focus:ring-2 focus:ring-purple-400 dark:border-purple-800 dark:bg-purple-950/40"
+          />
+          <div className="mt-3 flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => overrideNote.trim() && onOverride(overrideNote.trim())}
+              disabled={!overrideNote.trim()}
+              className="gap-1.5 bg-purple-600 text-xs font-semibold text-white hover:bg-purple-700"
+            >
+              <UserCheck className="size-3.5" />
+              Confirm Override
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setOverrideMode(false); setOverrideNote('') }}
+              className="text-xs text-muted-foreground"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 border-t border-indigo-200/60 p-3 dark:border-indigo-900/40">
+          <button
+            type="button"
+            onClick={() => setOverrideMode(true)}
+            className="shrink-0 rounded-xl border border-purple-300 px-3 py-1.5 text-[11px] font-semibold text-purple-700 transition hover:bg-purple-50 dark:border-purple-800 dark:text-purple-400 dark:hover:bg-purple-950/40"
+          >
+            Override AI
+          </button>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) } }}
+            placeholder="Ask about evidence tiers, graph topology, policy basis..."
+            disabled={isLoading}
+            className="flex-1 rounded-xl border border-input bg-background px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+          />
+          <button
+            type="button"
+            onClick={() => sendMessage(input)}
+            disabled={!input.trim() || isLoading}
+            className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white transition hover:bg-indigo-700 disabled:opacity-40"
+          >
+            <Send className="size-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * AnalystActionBar — self-contained analyst review panel.
+ *
+ * Appears after the AI resolution is rendered. The analyst can:
+ *   - Approve the verdict → green "Approved" confirmation banner
+ *   - Override the verdict → purple "Override" banner with justification note
+ *   - Open the AI Graph Copilot chat to investigate before deciding
+ *
+ * All state is local and resets automatically when the scenario changes.
+ */
+function AnalystActionBar({
+  scenarioCaseId,
+  liveDecision,
+  isLive,
+}: {
+  scenarioCaseId: string
+  liveDecision: BackendDecision | null
+  isLive: boolean
+}) {
+  const [action, setAction] = useState<'approved' | 'overridden' | null>(null)
+  const [overrideNote, setOverrideNote] = useState('')
+  const [showChat, setShowChat] = useState(false)
+  const [approvedAt] = useState(() => new Date().toLocaleString())
+
+  // Reset all state when the analyst switches to a different scenario
+  useEffect(() => {
+    setAction(null)
+    setOverrideNote('')
+    setShowChat(false)
+  }, [scenarioCaseId])
+
+  const now = new Date().toLocaleString()
+
+  return (
+    <section
+      className="mt-4 rounded-2xl border border-border bg-card p-5 shadow-xs"
+      style={{ animation: 'fadeSlideIn 0.4s ease-out' }}
+    >
+      {/* Section header */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+            Analyst Review Required
+          </span>
+          {isLive && (
+            <span className="flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+              <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />
+              Live Decision
+            </span>
+          )}
+        </div>
+        <span className="text-[11px] text-muted-foreground">Case {scenarioCaseId}</span>
+      </div>
+
+      {/* ── APPROVED STATE ── */}
+      {action === 'approved' && (
+        <div className="flex items-start gap-3 rounded-xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/40">
+          <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
+            <Check className="size-4" />
+          </span>
+          <div>
+            <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">
+              Decision Approved &amp; Executed
+            </p>
+            <p className="mt-0.5 text-[11px] text-emerald-800/80 dark:text-emerald-300/80">
+              Verdict transmitted to Card Scheme · {now}
+            </p>
+            <button
+              type="button"
+              onClick={() => setAction(null)}
+              className="mt-2 text-[11px] font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-600 dark:text-emerald-400"
+            >
+              Revoke approval
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── OVERRIDDEN STATE ── */}
+      {action === 'overridden' && (
+        <div className="flex items-start gap-3 rounded-xl border border-purple-300 bg-purple-50 p-4 dark:border-purple-800 dark:bg-purple-950/40">
+          <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-xl bg-purple-600 text-white">
+            <UserCheck className="size-4" />
+          </span>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-purple-900 dark:text-purple-100">
+              Manual Override Applied
+            </p>
+            <p className="mt-0.5 text-[11px] text-purple-800/80 dark:text-purple-300/80">
+              Logged by Operations Analyst · {now}
+            </p>
+            {overrideNote && (
+              <div className="mt-2 rounded-lg border border-purple-200 bg-white/80 p-2.5 text-xs text-foreground dark:border-purple-900 dark:bg-purple-950/60">
+                &ldquo;{overrideNote}&rdquo;
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => { setAction(null); setOverrideNote('') }}
+              className="mt-2 text-[11px] font-semibold text-purple-700 underline underline-offset-2 hover:text-purple-600 dark:text-purple-400"
+            >
+              Revoke override
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── PENDING ACTION BUTTONS ── */}
+      {!action && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            onClick={() => setAction('approved')}
+            className="gap-2 bg-emerald-600 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700"
+          >
+            <Check className="size-3.5" />
+            Approve &amp; Execute Verdict
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowChat((prev) => !prev)}
+            className={cx(
+              'gap-2 text-xs font-semibold transition-colors',
+              showChat && 'border-indigo-400 bg-indigo-50 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
+            )}
+          >
+            <MessageSquare className="size-3.5" />
+            {showChat ? 'Close Investigation' : 'Dig In & Investigate'}
+          </Button>
+          <span className="text-[11px] text-muted-foreground">
+            Review the AI reasoning before approving or overriding.
+          </span>
+        </div>
+      )}
+
+      {/* ── INLINE COPILOT CHAT ── */}
+      {showChat && !action && (
+        <AnalystCopilotChat
+          caseId={scenarioCaseId}
+          liveDecision={liveDecision}
+          onOverride={(note) => {
+            setOverrideNote(note)
+            setAction('overridden')
+            setShowChat(false)
+          }}
+        />
+      )}
+    </section>
+  )
+}
+
 export function DisputePlayground({
   initialScenarioId,
-  onNavigateToAnalyst,
 }: {
   initialScenarioId?: string
-  onNavigateToAnalyst?: () => void
 } = {}) {
   const [scenarioId, setScenarioId] = useState(initialScenarioId || scenarios[0].id)
   const scenario = useMemo(() => getScenario(scenarioId), [scenarioId])
@@ -206,6 +604,7 @@ export function DisputePlayground({
   const [detail, setDetail] = useState<'reasoning' | 'graph' | null>('reasoning')
   const [pipelineStage, setPipelineStage] = useState(0)
   const [liveDecision, setLiveDecision] = useState<BackendDecision | null>(null)
+  const [serverError, setServerError] = useState<string | null>(null)
 
   // Clear live decision if scenario changes to prevent cross-case contamination
   useEffect(() => {
@@ -214,6 +613,7 @@ export function DisputePlayground({
       setMerchantSubmitted(false)
       setCustomerSubmitted(false)
       setPipelineStage(0)
+      setServerError(null)
     }
   }, [scenario.caseId, liveDecision])
 
@@ -284,6 +684,7 @@ export function DisputePlayground({
     setDetail('reasoning')
     setPipelineStage(0)
     setLiveDecision(null)
+    setServerError(null)
   }
 
   const toggle = (id: string, side: 'customer' | 'merchant') => {
@@ -339,17 +740,7 @@ export function DisputePlayground({
               <RotateCcw className="mr-1 size-3.5" />
               Reset Case
             </Button>
-            {onNavigateToAnalyst && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={onNavigateToAnalyst}
-                className="gap-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                <Bot className="size-3.5" />
-                Analyst Dashboard & Chat
-              </Button>
-            )}
+
           </div>
         </div>
       </header>
@@ -593,12 +984,38 @@ export function DisputePlayground({
                       </div>
                     )}
 
+                    {serverError && (
+                      <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-xs dark:border-red-900/60 dark:bg-red-950/40">
+                        <div className="flex items-start gap-2.5">
+                          <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" />
+                          <div className="flex-1">
+                            <p className="font-bold text-red-900 dark:text-red-200">Backend Pipeline Offline</p>
+                            <p className="mt-1 leading-5 text-red-800 dark:text-red-300">{serverError}</p>
+                            <div className="mt-2.5 flex items-center gap-2">
+                              <code className="rounded bg-red-100 px-2 py-1 font-mono text-[11px] text-red-900 dark:bg-red-900/60 dark:text-red-100">
+                                uvicorn backend.main:app --port 8000 --reload
+                              </code>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setServerError(null)}
+                                className="h-7 text-[11px] border-red-300 text-red-800 hover:bg-red-100 dark:border-red-800 dark:text-red-200"
+                              >
+                                Dismiss
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <Button
                       variant="secondary"
                       className="w-full gap-2 font-semibold shadow-xs"
                       disabled={merchantSubmitted || isSubmitting || merchantEvidence.length < scenario.merchantEvidence.length}
                       onClick={async () => {
                         setIsSubmitting(true)
+                        setServerError(null)
                         setPipelineStage(1)
                         try {
                           const result = await caseService.submitMerchant({
@@ -611,10 +1028,11 @@ export function DisputePlayground({
                           setLiveDecision(result.liveDecision)
                           setMerchantSubmitted(true)
                           setPipelineStage(3)
-                        } catch (err) {
+                        } catch (err: any) {
                           console.error(err)
-                          setMerchantSubmitted(true)
-                          setPipelineStage(3)
+                          setServerError(err?.message || 'Failed to connect to Python backend worker.')
+                          setPipelineStage(0)
+                          setMerchantSubmitted(false)
                         } finally {
                           setIsSubmitting(false)
                         }
@@ -939,6 +1357,15 @@ export function DisputePlayground({
           </section>
           )
         })()}
+
+        {/* ── 4. Inline Analyst Investigation Panel ─────────────────────── */}
+        {merchantSubmitted && pipelineStage >= 3 && (
+          <AnalystActionBar
+            scenarioCaseId={scenario.caseId}
+            liveDecision={liveDecision}
+            isLive={!!liveDecision && liveDecision.case_id === scenario.caseId}
+          />
+        )}
       </div>
     </main>
   )
