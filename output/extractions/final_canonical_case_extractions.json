@@ -1,0 +1,551 @@
+{
+  "title": "Canonical Case Evidence Extractions",
+  "case_id": "DSP-2026-00187",
+  "generated_at": "2026-08-29T10:16:23Z",
+  "summary": {
+    "source_data_dir": "C:\\Users\\nshej\\fullstack\\AI_Dispute_Chargeback\\data\\category_0_item_not recieved",
+    "total_documents_processed": 7,
+    "structured_form_documents": 2,
+    "unstructured_documents": 5,
+    "unique_entities_discovered": {
+      "case_ids": [
+        "DSP-2026-00187"
+      ],
+      "order_ids": [
+        "ORD-987654321"
+      ],
+      "tracking_numbers": [
+        "FTL9284710556"
+      ],
+      "merchants": [
+        "FastTrack Logistics"
+      ],
+      "customers": [
+        "cardholder@example.com",
+        "Customer"
+      ],
+      "reports": [
+        "Shipment Tracking Report"
+      ],
+      "devices": [],
+      "user_accounts": [],
+      "subscriptions": [],
+      "inspectors": [],
+      "items": [
+        "BrewPro Espresso Machine, Stainless Steel"
+      ],
+      "ordered_items": [
+        "BrewPro Espresso Machine, Stainless Steel"
+      ],
+      "received_items": []
+    }
+  },
+  "extractions": [
+    {
+      "meta": {
+        "case_id": "DSP-2026-00187",
+        "document_id": "doc-form-cardholder_intake_fo-1787998525",
+        "file_name": "cardholder_intake_form.json",
+        "owner": "cardholder",
+        "evidence_type": "DISPUTE_FORM",
+        "extraction_method": "deterministic_regex_form_parser",
+        "extracted_at": "2026-07-18T09:14:00Z",
+        "confidence": 1.0
+      },
+      "payload": {
+        "merchant_name": "NovaMart",
+        "customer_name": "Cardholder",
+        "dispute_reason": "Item Not Received",
+        "canonical_dispute_reason": "ITEM_NOT_RECEIVED",
+        "claim": "I ordered a espresso machine from NovaMart on July 5 for $449.99. The estimated delivery window shown at checkout was July 8-10. I never received the package. I checked with my building's front desk and my neighbors, and nobody signed for or saw a delivery. I emailed the merchant on July 12 and July 15 asking for an update and did not get a helpful response. I would like a full refund since I never received the item.",
+        "requested_resolution": "Full refund",
+        "disputed_amount": 449.99,
+        "currency": "USD",
+        "order_id": "ORD-987654321",
+        "canonical_merchant_id": "MER-FASTTRACK-LOGISTICS"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "ast-form-998525-1",
+            "assertion_text": "I ordered a espresso machine from NovaMart on July 5 for $449.99.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "ast-form-998525-2",
+            "assertion_text": "The estimated delivery window shown at checkout was July 8-10.",
+            "subject_entity": "Policy"
+          },
+          {
+            "claim_id": "ast-form-998525-3",
+            "assertion_text": "I never received the package.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "ast-form-998525-4",
+            "assertion_text": "I checked with my building's front desk and my neighbors, and nobody signed for or saw a delivery.",
+            "subject_entity": "Policy"
+          },
+          {
+            "claim_id": "ast-form-998525-5",
+            "assertion_text": "I emailed the merchant on July 12 and July 15 asking for an update and did not get a helpful response.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "ast-form-998525-6",
+            "assertion_text": "I would like a full refund since I never received the item.",
+            "subject_entity": "Refund"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Merchant",
+            "entity_id": "FastTrack Logistics",
+            "name": "FastTrack Logistics"
+          },
+          {
+            "entity_type": "Order",
+            "entity_id": "ORD-987654321",
+            "name": "ORD-987654321"
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00187",
+        "document_id": "doc-form-merchant_response_fo-1787998525",
+        "file_name": "merchant_response_form.json",
+        "owner": "merchant",
+        "evidence_type": "DISPUTE_FORM",
+        "extraction_method": "deterministic_regex_form_parser",
+        "extracted_at": "2026-07-20T13:05:00Z",
+        "confidence": 1.0
+      },
+      "payload": {
+        "merchant_name": "FastTrack Logistics",
+        "merchant_id": "FastTrack Logistics",
+        "customer_name": "Cardholder",
+        "dispute_reason": "Item Not Received (Visa 13.1)",
+        "canonical_dispute_reason": "ITEM_NOT_RECEIVED",
+        "claim": "Order shipped same week of purchase. Carrier tracking confirms delivery to the address on file within the promised window. Delivery was contactless per account delivery preferences, so no signature was collected. Customer's non-receipt report was filed 9 days after the marked delivery date.",
+        "requested_resolution": "Uphold charge / deny refund",
+        "currency": "USD",
+        "canonical_merchant_id": "MER-FASTTRACK-LOGISTICS"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "ast-form-998525-1",
+            "assertion_text": "Order shipped same week of purchase.",
+            "subject_entity": "MER-NOVAMART-0042"
+          },
+          {
+            "claim_id": "ast-form-998525-2",
+            "assertion_text": "Carrier tracking confirms delivery to the address on file within the promised window.",
+            "subject_entity": "Policy"
+          },
+          {
+            "claim_id": "ast-form-998525-3",
+            "assertion_text": "Delivery was contactless per account delivery preferences, so no signature was collected.",
+            "subject_entity": "Policy"
+          },
+          {
+            "claim_id": "ast-form-998525-4",
+            "assertion_text": "Customer's non-receipt report was filed 9 days after the marked delivery date.",
+            "subject_entity": "Policy"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Merchant",
+            "entity_id": "FastTrack Logistics",
+            "name": "FastTrack Logistics"
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00187",
+        "document_id": "doc-cardholder_email_scr-1787998526",
+        "file_name": "cardholder_email_screenshot.png",
+        "owner": "cardholder",
+        "evidence_type": "COMMUNICATION_LOG",
+        "extracted_at": "2026-08-29T10:15:42Z",
+        "confidence": 0.7,
+        "processed_by": "ocr_image_extractor"
+      },
+      "payload": {
+        "messages": [
+          {
+            "sender": "cardholder@example.com",
+            "recipient": "support@novamart.example",
+            "timestamp": "2026-07-12T11:03:00",
+            "body": "Hi, my order was expected to arrive July 8-10 and it\u2019s now past that window. Can you tell me the status? Nobody at my building saw a delivery."
+          },
+          {
+            "sender": "support@novamart.example",
+            "recipient": "cardholder@example.com",
+            "timestamp": "2026-07-13T08:47:00",
+            "body": "Thank you for contacting NovaMart support. This is an automated acknowledgment. A team member will follow up shortly."
+          },
+          {
+            "sender": "cardholder@example.com",
+            "recipient": "support@novamart.example",
+            "body": "Ithas now been over a week past the delivery window and I have not received any real update. I still do not have the item. Please issue a refund if this cannot be resolved."
+          }
+        ],
+        "canonical_merchant_id": "MER-FASTTRACK-LOGISTICS"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "claim-1",
+            "assertion_text": "The order was expected to arrive July 8-10.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "claim-2",
+            "assertion_text": "It is now past the expected delivery window.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "claim-3",
+            "assertion_text": "Nobody at the cardholder's building saw a delivery.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "claim-4",
+            "assertion_text": "The support email is an automated acknowledgment.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "claim-5",
+            "assertion_text": "A team member will follow up shortly.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "claim-6",
+            "assertion_text": "It has been over a week past the delivery window with no real update.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "claim-7",
+            "assertion_text": "The cardholder still does not have the item.",
+            "subject_entity": "ORD-987654321"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Order",
+            "entity_id": "ORD-987654321",
+            "name": "ORD-987654321"
+          },
+          {
+            "entity_type": "Merchant",
+            "entity_id": "FastTrack Logistics",
+            "name": "FastTrack Logistics"
+          },
+          {
+            "entity_type": "Customer",
+            "entity_id": "cardholder@example.com",
+            "name": "cardholder@example.com"
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00187",
+        "document_id": "doc-cardholder_order_rec-1787998543",
+        "file_name": "cardholder_order_receipt.pdf",
+        "owner": "cardholder",
+        "evidence_type": "PURCHASE_RECORD",
+        "extracted_at": "2026-08-29T10:15:47Z",
+        "confidence": 0.85,
+        "processed_by": "ocr_pdf_txt_extractor"
+      },
+      "payload": {
+        "merchant_name": "NovaMart",
+        "order_id": "ORD-987654321",
+        "purchase_date": "2026-07-05T14:22:00",
+        "total_amount": 449.99,
+        "currency": "USD",
+        "shipping_address": "412 Maple Court, Apt 3B, Springfield, IL 62704",
+        "billing_address": "412 Maple Court, Apt 3B, Springfield, IL 62704",
+        "items": [
+          {
+            "name": "BrewPro Espresso Machine, Stainless Steel",
+            "quantity": 1,
+            "price": 449.99
+          }
+        ],
+        "canonical_merchant_id": "MER-FASTTRACK-LOGISTICS"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "claim-1",
+            "assertion_text": "Order ID ORD-987654321 was placed on July 5, 2026 at 2:22 PM.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "claim-2",
+            "assertion_text": "The merchant is NovaMart.",
+            "subject_entity": "NovaMart"
+          },
+          {
+            "claim_id": "claim-3",
+            "assertion_text": "The order includes 1 unit of BrewPro Espresso Machine, Stainless Steel priced at $449.99 each.",
+            "subject_entity": "BrewPro Espresso Machine, Stainless Steel"
+          },
+          {
+            "claim_id": "claim-4",
+            "assertion_text": "The total amount charged was $449.99 USD.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "claim-5",
+            "assertion_text": "Payment method was a card ending in 3456.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "claim-6",
+            "assertion_text": "Shipping address is 412 Maple Court, Apt 3B, Springfield, IL 62704.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "claim-7",
+            "assertion_text": "Billing address is 412 Maple Court, Apt 3B, Springfield, IL 62704.",
+            "subject_entity": "ORD-987654321"
+          },
+          {
+            "claim_id": "claim-8",
+            "assertion_text": "Estimated delivery window is July 8 - July 10, 2026.",
+            "subject_entity": "ORD-987654321"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Order",
+            "entity_id": "ORD-987654321",
+            "name": "ORD-987654321"
+          },
+          {
+            "entity_type": "OrderedItem",
+            "entity_id": "BrewPro Espresso Machine, Stainless Steel",
+            "name": "BrewPro Espresso Machine, Stainless Steel"
+          },
+          {
+            "entity_type": "Merchant",
+            "entity_id": "FastTrack Logistics",
+            "name": "FastTrack Logistics"
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00187",
+        "document_id": "doc-merchant_delivery_ph-1787998548",
+        "file_name": "merchant_delivery_photo.png",
+        "owner": "merchant",
+        "evidence_type": "DELIVERY_PROOF",
+        "extracted_at": "2026-08-29T10:15:51Z",
+        "confidence": 0.7,
+        "processed_by": "ocr_image_extractor"
+      },
+      "payload": {
+        "tracking_number": "FTL9284710556",
+        "canonical_merchant_id": "MER-FASTTRACK-LOGISTICS"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "claim-1",
+            "assertion_text": "The tracking number is FTL9284710556.",
+            "subject_entity": "FTL9284710556"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Tracking",
+            "entity_id": "FTL9284710556",
+            "name": "FTL9284710556"
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00187",
+        "document_id": "doc-merchant_terms_of_se-1787998552",
+        "file_name": "merchant_terms_of_service_excerpt.pdf",
+        "owner": "merchant",
+        "evidence_type": "MERCHANT_POLICY",
+        "extracted_at": "2026-08-29T10:15:56Z",
+        "confidence": 0.85,
+        "processed_by": "ocr_pdf_txt_extractor"
+      },
+      "payload": {
+        "policy_name": "NovaMart Terms of Service (v4.2) - Section 7 Shipping, Delivery & Non-Receipt Claims",
+        "clauses": [
+          {
+            "clause_id": "7.1",
+            "text": "An order is considered delivered once the carrier's tracking system marks the shipment status as \"Delivered\" at the shipping address on file for the order."
+          },
+          {
+            "clause_id": "7.2",
+            "text": "Customers must report a non-receipt claim within 5 business days of the marked delivery date in order to be eligible for investigation. Claims filed after this window may be denied at NovaMart's discretion."
+          },
+          {
+            "clause_id": "7.3",
+            "text": "Before filing a non-receipt claim, customers are encouraged to check with household members, neighbors, and building/property management, as packages are sometimes accepted or relocated by a third party at the delivery address."
+          },
+          {
+            "clause_id": "7.4",
+            "text": "NovaMart is not liable for packages confirmed as delivered by the carrier's tracking system that are lost, stolen, or misplaced after delivery."
+          }
+        ],
+        "canonical_merchant_id": "MER-FASTTRACK-LOGISTICS"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "claim-1",
+            "assertion_text": "An order is considered delivered once the carrier's tracking system marks the shipment status as \"Delivered\" at the shipping address on file for the order.",
+            "subject_entity": "NovaMart"
+          },
+          {
+            "claim_id": "claim-2",
+            "assertion_text": "Customers must report a non-receipt claim within 5 business days of the marked delivery date to be eligible for investigation.",
+            "subject_entity": "Customer"
+          },
+          {
+            "claim_id": "claim-3",
+            "assertion_text": "Claims filed after the 5 business day window may be denied at NovaMart's discretion.",
+            "subject_entity": "NovaMart"
+          },
+          {
+            "claim_id": "claim-4",
+            "assertion_text": "Customers are encouraged to check with household members, neighbors, and building/property management before filing a non-receipt claim.",
+            "subject_entity": "Customer"
+          },
+          {
+            "claim_id": "claim-5",
+            "assertion_text": "NovaMart is not liable for packages confirmed as delivered by the carrier's tracking system that are lost, stolen, or misplaced after delivery.",
+            "subject_entity": "NovaMart"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Merchant",
+            "entity_id": "FastTrack Logistics",
+            "name": "FastTrack Logistics"
+          },
+          {
+            "entity_type": "Customer",
+            "entity_id": "Customer",
+            "name": "Customer"
+          }
+        ]
+      }
+    },
+    {
+      "meta": {
+        "case_id": "DSP-2026-00187",
+        "document_id": "doc-merchant_tracking_re-1787998557",
+        "file_name": "merchant_tracking_report.pdf",
+        "owner": "merchant",
+        "evidence_type": "DELIVERY_PROOF",
+        "extracted_at": "2026-08-29T10:16:23Z",
+        "confidence": 0.85,
+        "processed_by": "ocr_pdf_txt_extractor"
+      },
+      "payload": {
+        "tracking_number": "FTL9284710556",
+        "delivery_date": "2026-07-09T15:42:00Z",
+        "gps_coordinates": "39.7990, -89.6440",
+        "delivery_location_description": "building entrance",
+        "canonical_merchant_id": "MER-FASTTRACK-LOGISTICS"
+      },
+      "extraction": {
+        "assertions": [
+          {
+            "claim_id": "claim-1",
+            "assertion_text": "The tracking number is FTL9284710556.",
+            "subject_entity": "FTL9284710556"
+          },
+          {
+            "claim_id": "claim-2",
+            "assertion_text": "The shipment was shipped on July 6, 2026 at 10:00 AM.",
+            "subject_entity": "FTL9284710556"
+          },
+          {
+            "claim_id": "claim-3",
+            "assertion_text": "The shipment was delivered on July 9, 2026 at 3:42 PM.",
+            "subject_entity": "FTL9284710556"
+          },
+          {
+            "claim_id": "claim-4",
+            "assertion_text": "The delivery status is Delivered.",
+            "subject_entity": "FTL9284710556"
+          },
+          {
+            "claim_id": "claim-5",
+            "assertion_text": "The delivery address is 412 Maple Court, Apt 3B, Springfield, IL 62704.",
+            "subject_entity": "FTL9284710556"
+          },
+          {
+            "claim_id": "claim-6",
+            "assertion_text": "The service level is Standard - Contactless.",
+            "subject_entity": "FTL9284710556"
+          },
+          {
+            "claim_id": "claim-7",
+            "assertion_text": "A label was created at 2026-07-06 10:00 AM at Distribution Center - Chicago, IL.",
+            "subject_entity": "FTL9284710556"
+          },
+          {
+            "claim_id": "claim-8",
+            "assertion_text": "The package was in transit on 2026-07-06 06:22 PM in Chicago, IL.",
+            "subject_entity": "FTL9284710556"
+          },
+          {
+            "claim_id": "claim-9",
+            "assertion_text": "The package was out for delivery on 2026-07-08 07:15 AM in Springfield, IL.",
+            "subject_entity": "FTL9284710556"
+          },
+          {
+            "claim_id": "claim-10",
+            "assertion_text": "The package was delivered on 2026-07-09 03:42 PM at 412 Maple Court, Springfield, IL.",
+            "subject_entity": "FTL9284710556"
+          },
+          {
+            "claim_id": "claim-11",
+            "assertion_text": "GPS coordinates at delivery scan are 39.7990, -89.6440, which resolves to building entrance.",
+            "subject_entity": "FTL9284710556"
+          }
+        ],
+        "entities": [
+          {
+            "entity_type": "Merchant",
+            "entity_id": "FastTrack Logistics",
+            "name": "FastTrack Logistics"
+          },
+          {
+            "entity_type": "Tracking",
+            "entity_id": "FTL9284710556",
+            "name": "FTL9284710556"
+          },
+          {
+            "entity_type": "Report",
+            "entity_id": "Shipment Tracking Report",
+            "name": "Shipment Tracking Report"
+          }
+        ]
+      }
+    }
+  ]
+}
