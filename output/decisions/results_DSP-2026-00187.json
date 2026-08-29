@@ -1,0 +1,71 @@
+{
+  "case_id": "DSP-2026-00187",
+  "verdict": "MERCHANT",
+  "confidence_score": 0.5744,
+  "confidence_band": "low_confidence",
+  "primary_reason": "Tier\u202f1 telemetry (carrier tracking and delivery photo) definitively shows the item was delivered, satisfying the merchant's delivery clause.",
+  "reasoning_statements": [
+    {
+      "statement": "Carrier tracking report showing shipment created July\u202f6, out\u2011for\u2011delivery July\u202f8, and marked Delivered July\u202f9\u202f2026\u202f15:42 at the correct address.",
+      "weight": 0.99,
+      "source_tier": "TIER_1_TELEMETRY",
+      "supports": "merchant",
+      "evidence_ids": [
+        "EP-07"
+      ]
+    },
+    {
+      "statement": "Delivery photo submitted by merchant showing package at the delivery address (carrier\u2011verified).",
+      "weight": 0.6435,
+      "source_tier": "TIER_1_TELEMETRY",
+      "supports": "merchant",
+      "evidence_ids": [
+        "EP-05"
+      ]
+    },
+    {
+      "statement": "Excerpt of merchant terms of service containing policy clauses 7.1\u20117.4.",
+      "weight": 0.2156,
+      "source_tier": "TIER_2_COMMUNICATION",
+      "supports": "merchant",
+      "evidence_ids": [
+        "EP-06"
+      ]
+    }
+  ],
+  "policy_basis": "Clause\u202f7.1 requires carrier confirmation of delivery, which is met by EP\u201107; Clause\u202f7.2 mandates a claim within 5 business days, satisfied by the cardholder's July\u202f12 email; Clause\u202f7.4 shields the merchant from liability once delivery is confirmed.",
+  "counterarguments_addressed": [
+    "Cardholder asserted non\u2011receipt; this was rebutted by higher\u2011tier evidence (Tier\u202f1 telemetry: EP\u201107 tracking report and EP\u201105 delivery photo) that proves delivery, and by policy clauses confirming the merchant\u2019s right to deny the claim."
+  ],
+  "executive_summary": "The cardholder filed a non\u2011receipt claim three days after the carrier marked the package as Delivered on July\u202f9. Tier\u202f1 telemetry provides irrefutable delivery proof, and the merchant\u2019s terms (clauses\u202f7.1\u20117.4) are fully satisfied. Consequently, the dispute is resolved in favor of the merchant.",
+  "deterministic_metrics": {
+    "cardholder_score": 1.1112,
+    "merchant_score": 1.8491,
+    "cardholder_pct": "42.6%",
+    "merchant_pct": "57.4%",
+    "net_direction": "MERCHANT",
+    "date_verifications_count": 2,
+    "amount_verifications_count": 1,
+    "misstatements_detected": 0
+  },
+  "pipeline": "lean_hybrid_reasoning_v3",
+  "execution_time_seconds": 48.22,
+  "run_at": "2026-08-29T10:18:29.473198+00:00",
+  "transaction_details": {
+    "case_id": "DSP-2026-00187",
+    "transaction_reference": "ORD-2026-00187",
+    "amount": 45.0,
+    "currency": "USD",
+    "merchant_name": "merchant",
+    "cardholder_name": "cardholder",
+    "dispute_reason": "ITEM_NOT_RECEIVED",
+    "reason_code": "13.1"
+  },
+  "resolution_time_metrics": {
+    "intake_to_decision_days": 17,
+    "industry_sla_baseline_days": 45,
+    "time_saved_days": 28,
+    "cycle_time_reduction_pct": "62.2%",
+    "ai_decision_latency_seconds": 48.22
+  }
+}

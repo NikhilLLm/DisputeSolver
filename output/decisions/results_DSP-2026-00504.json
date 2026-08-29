@@ -1,0 +1,54 @@
+{
+  "case_id": "DSP-2026-00504",
+  "verdict": "INSUFFICIENT_EVIDENCE",
+  "confidence_score": 0.5,
+  "confidence_band": "low_confidence",
+  "primary_reason": "The available evidence confirms a refund was processed, but there is no proof the cardholder received it, leaving the dispute unresolved due to insufficient evidence.",
+  "reasoning_statements": [
+    {
+      "statement": "Processor log records a REFUND of $65.00 on 2026-07-25T14:00:00Z with status SUCCESS (ARN REF-992288).",
+      "weight": 1.0,
+      "source_tier": "TIER_1_TELEMETRY",
+      "supports": "merchant",
+      "evidence_ids": [
+        "EP-02"
+      ]
+    },
+    {
+      "statement": "Processor log records an AUTHORIZATION of $65.00 on 2026-07-25T14:00:05Z with status APPROVED (ARN 74512345678901234567890).",
+      "weight": 0.65,
+      "source_tier": "TIER_1_TELEMETRY",
+      "supports": "merchant",
+      "evidence_ids": [
+        "EP-03"
+      ]
+    },
+    {
+      "statement": "Merchant dispute response form claims the customer should see the refund on their statement shortly.",
+      "weight": 0.0367,
+      "source_tier": "TIER_3_ASSERTION",
+      "supports": "merchant",
+      "evidence_ids": [
+        "EP-05"
+      ]
+    }
+  ],
+  "policy_basis": "Not applicable \u2014no merchant policy submitted for this dispute category",
+  "counterarguments_addressed": [
+    "The cardholder asserts the refund has not appeared on their statement after more than 10 days; this is countered by Tier\u202f1 telemetry logs (EP-02) showing a successful refund transaction on 2026-07-25, which is higher\u2011tier evidence, yet the statement of receipt remains unverified, so the dispute lacks conclusive proof."
+  ],
+  "executive_summary": "The cardholder disputed a $65.00 credit, claiming it never posted to their account. Merchant provided Tier\u202f1 telemetry confirming a successful refund on July 25, 2026, and the refund amount matches the disputed amount. While the processing evidence is strong, the cardholder\u2019s lack of receipt evidence means the case cannot be definitively resolved. Accordingly, the dispute is ruled INSUFFICIENT_EVIDENCE.",
+  "deterministic_metrics": {
+    "cardholder_score": 1.5302,
+    "merchant_score": 1.6867,
+    "cardholder_pct": "47.6%",
+    "merchant_pct": "52.4%",
+    "net_direction": "CONTESTED",
+    "date_verifications_count": 2,
+    "amount_verifications_count": 1,
+    "misstatements_detected": 0
+  },
+  "pipeline": "lean_hybrid_reasoning_v3",
+  "execution_time_seconds": 18.86,
+  "run_at": "2026-08-20T13:57:41.765153+00:00"
+}

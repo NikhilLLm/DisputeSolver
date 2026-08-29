@@ -1,0 +1,62 @@
+{
+  "case_id": "DSP-2026-00403",
+  "verdict": "CARDHOLDER",
+  "confidence_score": 0.568,
+  "confidence_band": "low_confidence",
+  "primary_reason": "The cardholder\u2019s high\u2011relevance, high\u2011confidence assertions that they were charged twice for the same coffee bean order, unchallenged by any merchant evidence, directly led to a CARDHOLDER verdict.",
+  "reasoning_statements": [
+    {
+      "statement": "Cardholder alleges they were charged twice for the same order of coffee beans.",
+      "weight": 0.2048,
+      "source_tier": "TIER_3_ASSERTION",
+      "supports": "cardholder",
+      "evidence_ids": [
+        "EP-01"
+      ]
+    },
+    {
+      "statement": "Cardholder intended to buy only one bag (order ORD-554433222).",
+      "weight": 0.1102,
+      "source_tier": "TIER_3_ASSERTION",
+      "supports": "cardholder",
+      "evidence_ids": [
+        "EP-02"
+      ]
+    }
+  ],
+  "policy_basis": "Not applicable \u2014no merchant policy submitted for this dispute category",
+  "counterarguments_addressed": [
+    "The merchant claimed only a single authorized charge, but provided no Tier\u202f1 telemetry or Tier\u202f2 communication evidence; consequently the unsubstantiated merchant position is outweighed by the cardholder\u2019s Tier\u202f3 assertions and the deterministic mathematical determination favoring the cardholder."
+  ],
+  "executive_summary": "The cardholder disputed duplicate processing, asserting two identical charges for order ORD-554433222. Supporting Tier\u202f3 statements were deemed highly relevant and confident, while the merchant offered no corroborating evidence. The deterministic model returned a CARDHOLDER verdict with a 56.8% confidence. Accordingly, the dispute is resolved in favor of the cardholder.",
+  "deterministic_metrics": {
+    "cardholder_score": 0.315,
+    "merchant_score": 0.0,
+    "cardholder_pct": "56.8%",
+    "merchant_pct": "43.2%",
+    "net_direction": "CARDHOLDER",
+    "date_verifications_count": 0,
+    "amount_verifications_count": 0,
+    "misstatements_detected": 0
+  },
+  "pipeline": "lean_hybrid_reasoning_v3",
+  "execution_time_seconds": 27.14,
+  "run_at": "2026-08-29T09:19:00.804131+00:00",
+  "transaction_details": {
+    "case_id": "DSP-2026-00403",
+    "transaction_reference": "ORD-2026-00403",
+    "amount": 45.0,
+    "currency": "USD",
+    "merchant_name": "merchant",
+    "cardholder_name": "cardholder",
+    "dispute_reason": "DUPLICATE_PROCESSING",
+    "reason_code": "12.1"
+  },
+  "resolution_time_metrics": {
+    "intake_to_decision_days": 16,
+    "industry_sla_baseline_days": 45,
+    "time_saved_days": 29,
+    "cycle_time_reduction_pct": "64.4%",
+    "ai_decision_latency_seconds": 27.14
+  }
+}

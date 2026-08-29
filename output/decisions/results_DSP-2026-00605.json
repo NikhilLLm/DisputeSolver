@@ -1,0 +1,91 @@
+{
+  "case_id": "DSP-2026-00605",
+  "verdict": "MERCHANT",
+  "confidence_score": 0.6944,
+  "confidence_band": "moderate_confidence",
+  "primary_reason": "Tier\u202f1 telemetry proved the cardholder accessed the service after the renewal date, confirming authorization for the August charge.",
+  "reasoning_statements": [
+    {
+      "statement": "User David Lee logged in on 2026-08-02 at 20:15:00 using an Apple TV device from IP 1.2.3.4",
+      "weight": 0.99,
+      "source_tier": "TIER_1_TELEMETRY",
+      "supports": "merchant",
+      "evidence_ids": [
+        "EP-01"
+      ]
+    },
+    {
+      "statement": "User David Lee started streaming content \"The Last Agent\" Season 1 Episode 1 on 2026-08-02 at 20:16:00",
+      "weight": 0.99,
+      "source_tier": "TIER_1_TELEMETRY",
+      "supports": "merchant",
+      "evidence_ids": [
+        "EP-02"
+      ]
+    },
+    {
+      "statement": "User David Lee logged in on 2026-08-03 at 18:00:00 using a Web Browser device from IP 1.2.3.4",
+      "weight": 0.99,
+      "source_tier": "TIER_1_TELEMETRY",
+      "supports": "merchant",
+      "evidence_ids": [
+        "EP-03"
+      ]
+    },
+    {
+      "statement": "Policy Clause 4.2 treats any access after renewal as authorization for next month\u2019s billing",
+      "weight": 0.4095,
+      "source_tier": "TIER_2_COMMUNICATION",
+      "supports": "merchant",
+      "evidence_ids": [
+        "EP-06"
+      ]
+    },
+    {
+      "statement": "Policy Clause 4.1 requires cancellation 48 hours before renewal date",
+      "weight": 0.2205,
+      "source_tier": "TIER_2_COMMUNICATION",
+      "supports": "merchant",
+      "evidence_ids": [
+        "EP-05"
+      ]
+    }
+  ],
+  "policy_basis": "Policy Clause\u202f4.1 requires cancellation at least 48\u202fhours before renewal; the cancellation on 2026\u201107\u201128 was 3\u202fdays before renewal (exceeding the allowed window). Policy Clause\u202f4.2 states any access after renewal constitutes authorization for the next billing cycle, which was satisfied by the logged\u2011in activity on 2026\u201108\u201102 and 2026\u201108\u201103.",
+  "counterarguments_addressed": [
+    "Cardholder claim (DC\u201101) that cancellation met the 48\u2011hour window was rebutted by date verification showing a 3\u2011day gap, exceeding the policy limit.",
+    "Cardholder claim (DC\u201102) that the August\u202f1 charge occurred before renewal was rebutted by date verification confirming the charge was 1\u202fday after the renewal date, violating the zero\u2011day allowance.",
+    "Merchant claim (DC\u201103) that usage occurred after cancellation was mischaracterized; Tier\u202f1 telemetry actually shows usage after renewal, which supports the merchant\u2019s right to bill under Clause\u202f4.2."
+  ],
+  "executive_summary": "The cardholder cancelled the subscription on 2026\u201107\u201128, missing the required 48\u2011hour pre\u2011renewal window, and was subsequently charged on 2026\u201108\u201101. Tier\u202f1 telemetry logs confirm the cardholder accessed the service on 2026\u201108\u201102 and 2026\u201108\u201103, satisfying the policy that post\u2011renewal usage authorizes the next month\u2019s billing. Consequently, the merchant\u2019s charge is valid and the dispute is resolved in favor of the merchant.",
+  "deterministic_metrics": {
+    "cardholder_score": 0.9582,
+    "merchant_score": 3.45,
+    "cardholder_pct": "30.6%",
+    "merchant_pct": "69.4%",
+    "net_direction": "MERCHANT",
+    "date_verifications_count": 3,
+    "amount_verifications_count": 1,
+    "misstatements_detected": 3
+  },
+  "pipeline": "lean_hybrid_reasoning_v3",
+  "execution_time_seconds": 48.18,
+  "run_at": "2026-08-29T09:21:24.051757+00:00",
+  "transaction_details": {
+    "case_id": "DSP-2026-00605",
+    "transaction_reference": "ORD-2026-00605",
+    "amount": 45.0,
+    "currency": "USD",
+    "merchant_name": "merchant",
+    "cardholder_name": "cardholder",
+    "dispute_reason": "SUBSCRIPTION_CANCELED",
+    "reason_code": "13.2"
+  },
+  "resolution_time_metrics": {
+    "intake_to_decision_days": 16,
+    "industry_sla_baseline_days": 45,
+    "time_saved_days": 29,
+    "cycle_time_reduction_pct": "64.4%",
+    "ai_decision_latency_seconds": 48.18
+  }
+}
