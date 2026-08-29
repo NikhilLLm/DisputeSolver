@@ -1,14 +1,48 @@
-# Ignore these specific files
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# Dependencies & Build Artefacts
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+package-lock.json.bak
+
+# Python & Virtual Environments
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*.class
+*.egg-info/
+.pytest_cache/
+
+# IDE & OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+bloom-export(1).zip
 project.drawio
 PROMPT_1.md
 WORK.md
 
-bloom-export(1).zip
-.env
+# Pipeline Output Rules
+# 1. Ignore all intermediate timestamped extraction & analysis files
+output/extractions/case_analysis_*.json
+output/extractions/graph_topology_plan*.json
+output/extractions/ocr_temp/
+output/temp/
+output/ocr_cache/
 
+# 2. Keep the ground-truth final canonical JSON schema
+!output/extractions/final_canonical_case_extractions.json
 
-
-__pycache__/
-*.pyc
-.vscode/
-*.tsbuildinfo
+# 3. Keep baseline benchmark decision packages
+!output/decisions/results_*.json
