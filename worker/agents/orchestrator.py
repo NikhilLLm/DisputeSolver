@@ -163,7 +163,7 @@ class DisputeReasoningOrchestrator:
             "merchant_name": parties.get("merchant", "Merchant"),
             "cardholder_name": parties.get("cardholder", "Cardholder"),
             "dispute_reason": canonical_reason,
-            "reason_code": dr.get("reason_code", config.reason_code_primary),
+            "reason_code": dr.get("reason_code") or config.get("canonical_reason", "13.1"),
         }
 
         decision_dict["resolution_time_metrics"] = {
