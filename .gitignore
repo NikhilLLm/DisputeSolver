@@ -7,7 +7,6 @@ bloom-export(1).zip
 .env
 
 
-output/
 
 __pycache__/
 *.pyc
