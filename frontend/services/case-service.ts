@@ -1,4 +1,4 @@
-﻿import { getScenario, type Evidence, type Scenario } from '@/data/scenarios'
+import { getScenario, type Evidence, type Scenario } from '@/data/scenarios'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -57,7 +57,9 @@ export const caseService = {
       })
       if (res.ok) {
         const data = await res.json()
-        return data as BackendDecision
+        if (data && (data.case_id === caseId || !data.case_id)) {
+          return { ...data, case_id: caseId } as BackendDecision
+        }
       }
     } catch {
       // Backend offline or not found
@@ -96,43 +98,68 @@ export const caseService = {
     caseId?: string
     response: string
     evidenceIds: string[]
+    onProgress?: (stage: number, stageName: string) => void
   }): Promise<{ accepted: boolean; processing: boolean; caseId: string; liveDecision: BackendDecision | null }> {
     const scenario = getScenario(input.scenarioId)
+    const targetCaseId = scenario.caseId
 
-    try {
-      // 120-second timeout to allow full OCR, Neo4j Graph building and LLM reasoning
-      const res = await fetch(`${API_BASE}/api/pipeline/run`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(120000),
-        body: JSON.stringify({
-          category_id: scenario.id,
-          case_id: scenario.caseId,
-          claim: scenario.claim,
-          merchant_response: input.response,
-          customer_evidence_ids: scenario.customerEvidence.map((e) => e.id),
-          merchant_evidence_ids: input.evidenceIds,
-        }),
-      })
+    // Start pipeline execution in background
+    const pipelinePromise = (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/pipeline/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(180000),
+          body: JSON.stringify({
+            category_id: scenario.id,
+            case_id: targetCaseId,
+            claim: scenario.claim,
+            merchant_response: input.response,
+            customer_evidence_ids: scenario.customerEvidence.map((e) => e.id),
+            merchant_evidence_ids: input.evidenceIds,
+          }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          return {
+            accepted: true,
+            processing: false,
+            caseId: targetCaseId,
+            liveDecision: { ...(data.decision as BackendDecision), source: data.source },
+          }
+        }
+      } catch (err) {
+        console.warn('[case-service] Pipeline trigger warning:', err)
+      }
+      return null
+    })()
 
-      if (res.ok) {
-        const data = await res.json()
+    // Poll GET /api/decisions/{caseId} every 2s to return instantaneously when ready
+    let attempts = 0
+    while (attempts < 50) {
+      await new Promise((r) => setTimeout(r, 2000))
+      attempts++
+
+      if (input.onProgress) {
+        if (attempts === 2) input.onProgress(1, 'Extracting OCR & Canonical Envelopes...')
+        else if (attempts === 6) input.onProgress(2, 'Building 5-Layer Neo4j Graph...')
+        else if (attempts === 11) input.onProgress(3, 'Running Tri-Agent Reasoning Engine...')
+      }
+
+      const checkDecision = await caseService.getDecision(targetCaseId)
+      if (checkDecision && checkDecision.case_id === targetCaseId && checkDecision.reasoning_statements && checkDecision.reasoning_statements.length > 0) {
         return {
           accepted: true,
           processing: false,
-          caseId: scenario.caseId,
-          liveDecision: { ...(data.decision as BackendDecision), source: data.source },
+          caseId: targetCaseId,
+          liveDecision: checkDecision,
         }
-      }
-    } catch (err) {
-      console.warn('[case-service] Pipeline fetch error or timeout:', err)
-      // If live run threw, check if decision was computed and saved
-      const cached = await caseService.getDecision(scenario.caseId)
-      if (cached) {
-        return { accepted: true, processing: false, caseId: scenario.caseId, liveDecision: { ...cached, source: 'cache' } }
       }
     }
 
-    return { accepted: true, processing: false, caseId: scenario.caseId, liveDecision: null }
+    const finalRes = await pipelinePromise
+    if (finalRes) return finalRes
+
+    return { accepted: true, processing: false, caseId: targetCaseId, liveDecision: null }
   },
 }

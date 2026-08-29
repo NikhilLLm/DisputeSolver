@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   AlertCircle,
   AlertTriangle,
@@ -177,6 +177,8 @@ export function AnalystDashboard({
 
   // Selected case for deep-dive investigation
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null)
+
+
   const selectedScenario = useMemo(
     () => (selectedCaseId ? scenarios.find((s) => s.id === selectedCaseId) || null : null),
     [selectedCaseId]
@@ -473,17 +475,36 @@ export function AnalystDashboard({
                 {filteredScenarios.map((item) => {
                   const state = reviews[item.id] || { status: 'PENDING' }
                   const isSelected = selectedCaseId === item.id
+                  const live = caseDecisions[item.caseId]
+
+                  const rowOutcome = live
+                    ? live.verdict === 'MERCHANT'
+                      ? 'Merchant Defense Upheld (Proof of Delivery)'
+                      : live.verdict === 'CARDHOLDER'
+                      ? 'Cardholder Refund Recommended'
+                      : 'Dispute Escalated — Insufficient Evidence'
+                    : item.decision.outcome
+
+                  const rowSummary = live
+                    ? live.primary_reason || live.executive_summary
+                    : item.decision.primaryReason || item.decision.summary
+
+                  const rowConfidence = live
+                    ? `${(live.confidence_score * 100).toFixed(0)}%`
+                    : item.decision.confidence
+
+                  const isMerchantVerdict = (live ? live.verdict === 'MERCHANT' : item.decision.outcome.toLowerCase().includes('merchant'))
 
                   return (
                     <tr
                       key={item.id}
                       onClick={() => {
                         setSelectedCaseId(item.id)
-                        if (!caseDecisions[item.caseId]) {
-                          caseService.getDecision(item.caseId).then((dec) => {
-                            if (dec) setCaseDecisions((prev) => ({ ...prev, [item.caseId]: dec }))
-                          })
-                        }
+                        caseService.getDecision(item.caseId).then((dec) => {
+                          if (dec && (dec.reasoning_statements?.length || dec.verdict)) {
+                            setCaseDecisions((prev) => ({ ...prev, [item.caseId]: dec }))
+                          }
+                        })
                       }}
                       className={cx(
                         'cursor-pointer transition-colors hover:bg-muted/30',
@@ -497,6 +518,11 @@ export function AnalystDashboard({
                           <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
                             {item.reasonCode}
                           </span>
+                          {live && (
+                            <span className="rounded bg-emerald-500/10 px-1 py-0.2 text-[9px] font-bold text-emerald-600 border border-emerald-500/20">
+                              LIVE
+                            </span>
+                          )}
                         </div>
                         <p className="mt-0.5 text-[11px] text-muted-foreground">{item.category}</p>
                       </td>
@@ -515,15 +541,15 @@ export function AnalystDashboard({
                       {/* AI Verdict */}
                       <td className="px-4 py-3.5 max-w-xs">
                         <div className="flex items-center gap-1.5 font-semibold text-foreground">
-                          {item.decision.outcome.toLowerCase().includes('merchant') ? (
+                          {isMerchantVerdict ? (
                             <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" />
                           ) : (
                             <CheckCircle2 className="size-3.5 text-blue-600 shrink-0" />
                           )}
-                          <span className="truncate">{item.decision.outcome}</span>
+                          <span className="truncate">{rowOutcome}</span>
                         </div>
                         <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                          {item.decision.primaryReason || item.decision.summary}
+                          {rowSummary}
                         </p>
                       </td>
 
@@ -531,10 +557,10 @@ export function AnalystDashboard({
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2">
                           <span className="rounded-md bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                            {item.decision.confidence}
+                            {rowConfidence}
                           </span>
                           <span className="text-[11px] text-muted-foreground">
-                            {item.resolutionTime.cycleDays}d cycle
+                            {(live as any)?.resolution_time_metrics?.time_saved_days ? `${(live as any).resolution_time_metrics.intake_to_decision_days}d cycle` : `${item.resolutionTime.cycleDays}d cycle`}
                           </span>
                         </div>
                       </td>
@@ -573,7 +599,14 @@ export function AnalystDashboard({
                           <Button
                             size="sm"
                             variant={isSelected ? 'default' : 'secondary'}
-                            onClick={() => setSelectedCaseId(item.id)}
+                            onClick={() => {
+                              setSelectedCaseId(item.id)
+                              caseService.getDecision(item.caseId).then((dec) => {
+                                if (dec && dec.reasoning_statements) {
+                                  setCaseDecisions((prev) => ({ ...prev, [item.caseId]: dec }))
+                                }
+                              })
+                            }}
                             className="h-7 gap-1 text-[11px] font-semibold"
                           >
                             <MessageSquare className="size-3" /> Dig In & Chat
@@ -826,29 +859,71 @@ export function AnalystDashboard({
                       <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{selectedScenario.decision.confidence} AI score</span>
                     </div>
                   </div>
-                ) : (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                          AI Synthesized Verdict (Pending Sign-off)
-                        </span>
-                        <span className="rounded bg-amber-200 px-1.5 py-0.5 text-[9px] font-bold text-amber-900 dark:bg-amber-900 dark:text-amber-200">
-                          Awaiting Action
+                ) : (() => {
+                  const live = caseDecisions[selectedScenario.caseId]
+                  const dossierOutcome = live
+                    ? live.verdict === 'MERCHANT'
+                      ? 'Merchant Wins — Dispute Denied (Representment Upheld)'
+                      : live.verdict === 'CARDHOLDER'
+                      ? 'Cardholder Wins — Refund Granted'
+                      : 'Insufficient Evidence — Case Escalated'
+                    : selectedScenario.decision.outcome
+
+                  const dossierConfidence = live
+                    ? `${(live.confidence_score * 100).toFixed(1)}%`
+                    : selectedScenario.decision.confidence
+
+                  const dossierSummary = live
+                    ? live.executive_summary || live.primary_reason
+                    : selectedScenario.decision.summary
+
+                  const dm = live?.deterministic_metrics
+
+                  return (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                            AI Synthesized Verdict {live ? '(Live Pipeline)' : '(Pending Sign-off)'}
+                          </span>
+                          <span className="rounded bg-amber-200 px-1.5 py-0.5 text-[9px] font-bold text-amber-900 dark:bg-amber-900 dark:text-amber-200">
+                            Awaiting Action
+                          </span>
+                        </div>
+                        <span className="rounded bg-emerald-200/80 px-2 py-0.5 text-xs font-bold text-emerald-900 dark:bg-emerald-900 dark:text-emerald-200">
+                          {dossierConfidence} Confidence Score
                         </span>
                       </div>
-                      <span className="rounded bg-emerald-200/80 px-2 py-0.5 text-xs font-bold text-emerald-900 dark:bg-emerald-900 dark:text-emerald-200">
-                        {selectedScenario.decision.confidence} Confidence Score
-                      </span>
+                      <h3 className="mt-1 text-base font-bold text-emerald-950 dark:text-emerald-100">
+                        {dossierOutcome}
+                      </h3>
+                      <p className="mt-1 text-xs text-muted-foreground leading-5">
+                        {dossierSummary}
+                      </p>
+
+                      {dm && (
+                        <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-emerald-200/80 bg-white/70 p-2.5 text-[11px] dark:border-emerald-900/60 dark:bg-emerald-950/60 sm:grid-cols-4">
+                          <div>
+                            <span className="text-[10px] text-muted-foreground font-semibold">Cardholder Score</span>
+                            <p className="font-bold text-blue-600">{dm.cardholder_pct} ({dm.cardholder_score})</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-muted-foreground font-semibold">Merchant Score</span>
+                            <p className="font-bold text-emerald-600">{dm.merchant_pct} ({dm.merchant_score})</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-muted-foreground font-semibold">Net Direction</span>
+                            <p className="font-bold text-foreground">{dm.net_direction}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-muted-foreground font-semibold">Checks Run</span>
+                            <p className="font-bold text-foreground">{(dm.date_verifications_count || 0) + (dm.amount_verifications_count || 0)} Verifications</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <h3 className="mt-1 text-base font-bold text-emerald-950 dark:text-emerald-100">
-                      {selectedScenario.decision.outcome}
-                    </h3>
-                    <p className="mt-1 text-xs text-muted-foreground leading-5">
-                      {selectedScenario.decision.summary}
-                    </p>
-                  </div>
-                )}
+                  )
+                })()}
 
                 {/* 5-Layer Knowledge Graph Explorer */}
                 <div className="rounded-xl border border-border bg-muted/30 p-4">
@@ -934,18 +1009,28 @@ export function AnalystDashboard({
                 </div>
 
                 {/* Policy & Deterministic Factors */}
-                <div className="rounded-xl border border-border bg-muted/20 p-4 text-xs">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Decisive Factors & Policy Basis</p>
-                  <p className="mt-1 font-semibold text-foreground">{selectedScenario.decision.policyBasis || 'Card Scheme Dispute Regulations'}</p>
-                  <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
-                    {selectedScenario.decision.factors.map((factor) => (
-                      <li key={factor} className="flex items-start gap-1.5 rounded-lg border border-border/60 bg-card p-2 text-[11px]">
-                        <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
-                        <span>{factor}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {(() => {
+                  const live = caseDecisions[selectedScenario.caseId]
+                  const policyText = live?.policy_basis || selectedScenario.decision.policyBasis || 'Card Scheme Dispute Regulations'
+                  const factorList = (live?.reasoning_statements?.length)
+                    ? live.reasoning_statements.slice(0, 4).map((r) => `[${r.source_tier.replace('TIER_', 'Tier ')} · ${r.supports.toUpperCase()}] ${r.statement}`)
+                    : selectedScenario.decision.factors
+
+                  return (
+                    <div className="rounded-xl border border-border bg-muted/20 p-4 text-xs">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-primary">Decisive Factors & Policy Basis</p>
+                      <p className="mt-1 font-semibold text-foreground">{policyText}</p>
+                      <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                        {factorList.map((factor) => (
+                          <li key={factor} className="flex items-start gap-1.5 rounded-lg border border-border/60 bg-card p-2 text-[11px]">
+                            <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
+                            <span>{factor}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Right Column: Interactive AI Graph Copilot Chat */}

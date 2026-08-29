@@ -1,9 +1,8 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertCircle,
-  Loader2,
   AlertTriangle,
   ArrowRight,
   Bot,
@@ -17,6 +16,7 @@ import {
   GitBranch,
   Landmark,
   Layers,
+  Loader2,
   Plus,
   RotateCcw,
   Send,
@@ -207,37 +207,69 @@ export function DisputePlayground({
   const [pipelineStage, setPipelineStage] = useState(0)
   const [liveDecision, setLiveDecision] = useState<BackendDecision | null>(null)
 
-  // Stagger pipeline stages after merchant submits for visual pacing
+  // Clear live decision if scenario changes to prevent cross-case contamination
   useEffect(() => {
-    if (!merchantSubmitted) { setPipelineStage(0); return }
-    const t1 = setTimeout(() => setPipelineStage(1), 800)
-    const t2 = setTimeout(() => setPipelineStage(2), 1600)
-    const t3 = setTimeout(() => setPipelineStage(3), 2200)
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
-  }, [merchantSubmitted])
+    if (liveDecision && liveDecision.case_id !== scenario.caseId) {
+      setLiveDecision(null)
+      setMerchantSubmitted(false)
+      setCustomerSubmitted(false)
+      setPipelineStage(0)
+    }
+  }, [scenario.caseId, liveDecision])
 
   const events = useMemo(() => {
-    const next = initialTimeline()
-    if (customerSubmitted) {
-      next[0] = { label: 'Dispute filed', detail: `Cardholder claim & ${scenario.customerEvidence.length} docs ingested`, status: 'complete' }
-      next[1] = { label: 'Merchant notified', detail: `Representment package sent to ${scenario.merchant}`, status: 'current' }
-    }
-    if (merchantSubmitted) {
-      next[1].status = 'complete'
-      next[2] = { label: 'Merchant defense', detail: `Telemetry & ${scenario.merchantEvidence.length} records submitted`, status: 'complete' }
-      next[3] = {
-        label: 'AI investigation',
-        detail: pipelineStage >= 1 ? '5-layer graph & deterministic checks verified' : 'Analyzing evidence graphâ€¦',
-        status: pipelineStage >= 1 ? 'complete' : 'current',
-      }
-      next[4] = {
-        label: 'Decision ready',
-        detail: pipelineStage >= 2 ? 'Explainable verdict synthesized' : 'Awaiting analysis',
-        status: pipelineStage >= 2 ? 'complete' : pipelineStage >= 1 ? 'current' : 'pending',
-      }
-    }
-    return next
-  }, [customerSubmitted, merchantSubmitted, pipelineStage, scenario])
+    const list: TimelineEvent[] = [
+      {
+        label: '1. Dispute filed',
+        detail: customerSubmitted
+          ? `Cardholder claim & ${scenario.customerEvidence.length} documents ingested`
+          : 'Waiting for cardholder dispute intake submission',
+        status: customerSubmitted ? 'complete' : 'current',
+      },
+      {
+        label: '2. Merchant notified',
+        detail: customerSubmitted
+          ? `Representment package delivered to ${scenario.merchant}`
+          : 'Awaiting dispute intake',
+        status: customerSubmitted ? (merchantSubmitted || isSubmitting ? 'complete' : 'current') : 'pending',
+      },
+      {
+        label: '3. Merchant defense',
+        detail: merchantSubmitted || isSubmitting
+          ? `Telemetry & ${scenario.merchantEvidence.length} defense records submitted`
+          : 'Waiting for merchant defense and telemetry submission',
+        status: (merchantSubmitted || isSubmitting) ? 'complete' : 'pending',
+      },
+      {
+        label: '4. Evidence OCR & Extraction',
+        detail: pipelineStage >= 2 || merchantSubmitted
+          ? 'Canonical JSON extractions and OCR text parsed'
+          : isSubmitting || pipelineStage >= 1
+          ? 'Extracting receipts, tracking logs & photos...'
+          : 'Awaiting evidence submission',
+        status: pipelineStage >= 2 || merchantSubmitted ? 'complete' : isSubmitting || pipelineStage >= 1 ? 'current' : 'pending',
+      },
+      {
+        label: '5. 5-Layer Knowledge Graph',
+        detail: pipelineStage >= 3 || merchantSubmitted
+          ? `${scenario.graph.nodes.length} entity hubs & relational bridges validated in Neo4j`
+          : pipelineStage >= 2
+          ? 'Constructing graph topology & running validation...'
+          : 'Awaiting extraction',
+        status: pipelineStage >= 3 || merchantSubmitted ? 'complete' : pipelineStage >= 2 ? 'current' : 'pending',
+      },
+      {
+        label: '6. Tri-Agent Reasoning Decision',
+        detail: merchantSubmitted && pipelineStage >= 3
+          ? 'Explainable multi-tier verdict & deterministic scores synthesized'
+          : pipelineStage >= 2
+          ? 'Evaluating evidence tiers & running arithmetic checks...'
+          : 'Awaiting graph mapping',
+        status: merchantSubmitted && pipelineStage >= 3 ? 'complete' : isSubmitting && pipelineStage >= 2 ? 'current' : 'pending',
+      },
+    ]
+    return list
+  }, [customerSubmitted, merchantSubmitted, isSubmitting, pipelineStage, scenario])
 
   const reset = (id = scenarioId) => {
     const next = getScenario(id)
@@ -251,6 +283,7 @@ export function DisputePlayground({
     setIsSubmitting(false)
     setDetail('reasoning')
     setPipelineStage(0)
+    setLiveDecision(null)
   }
 
   const toggle = (id: string, side: 'customer' | 'merchant') => {
@@ -298,7 +331,7 @@ export function DisputePlayground({
             >
               {scenarios.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.label} ({item.amount}) â€” {item.caseId}
+                  {item.label} ({item.amount}) — {item.caseId}
                 </option>
               ))}
             </select>
@@ -340,7 +373,7 @@ export function DisputePlayground({
               {scenario.label}
             </h2>
             <p className="mt-1 max-w-3xl text-xs text-muted-foreground leading-5">
-              Simulating end-to-end data pipeline: Real files from <code className="rounded bg-muted px-1 text-[11px] font-mono">{scenario.categoryFolder}</code> ingested into Canonical JSON $\to$ 5-layer Neo4j graph $\to$ Tri-agent reasoning engine.
+              Simulating end-to-end data pipeline: Real files from <code className="rounded bg-muted px-1 text-[11px] font-mono">{scenario.categoryFolder}</code> ingested into Canonical JSON &rarr; 5-layer Neo4j graph &rarr; Tri-agent reasoning engine.
             </p>
           </div>
 
@@ -357,7 +390,7 @@ export function DisputePlayground({
             </div>
             <div className="flex items-center gap-2">
               <CreditCard className="size-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground">Order Ref: {scenario.orderId} Â· Date: {scenario.date}</span>
+              <span className="text-muted-foreground">Order Ref: {scenario.orderId} · Date: {scenario.date}</span>
             </div>
           </div>
         </div>
@@ -565,13 +598,26 @@ export function DisputePlayground({
                       className="w-full gap-2 font-semibold shadow-xs"
                       disabled={merchantSubmitted || isSubmitting || merchantEvidence.length < scenario.merchantEvidence.length}
                       onClick={async () => {
-                        await caseService.submitMerchant({
-                          scenarioId,
-                          caseId: scenario.caseId,
-                          response: merchantResponse,
-                          evidenceIds: merchantEvidence,
-                        })
-                        setMerchantSubmitted(true)
+                        setIsSubmitting(true)
+                        setPipelineStage(1)
+                        try {
+                          const result = await caseService.submitMerchant({
+                            scenarioId,
+                            caseId: scenario.caseId,
+                            response: merchantResponse,
+                            evidenceIds: merchantEvidence,
+                            onProgress: (stage) => setPipelineStage(stage),
+                          })
+                          setLiveDecision(result.liveDecision)
+                          setMerchantSubmitted(true)
+                          setPipelineStage(3)
+                        } catch (err) {
+                          console.error(err)
+                          setMerchantSubmitted(true)
+                          setPipelineStage(3)
+                        } finally {
+                          setIsSubmitting(false)
+                        }
                       }}
                     >
                       {isSubmitting ? (
@@ -614,7 +660,7 @@ export function DisputePlayground({
                   <div>
                     <p className="text-xs font-bold">Pipeline Complete</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-4">
-                      Executed extraction $\to$ graph topology $\to$ tri-agent reasoning engine.
+                      Executed extraction &rarr; graph topology &rarr; tri-agent reasoning engine.
                     </p>
                   </div>
                 </div>
@@ -640,42 +686,43 @@ export function DisputePlayground({
 
         {/* 3. AI Resolution & Scoring Center */}
         {merchantSubmitted && pipelineStage >= 3 && (() => {
-          // Build a unified display object: liveDecision fields take priority, fall back to scenario
-          const verdictLabel = liveDecision
-            ? liveDecision.verdict === 'MERCHANT'
+          const isLive = !!liveDecision && liveDecision.case_id === scenario.caseId
+          const active = isLive ? liveDecision : null
+
+          const verdictLabel = active
+            ? active.verdict === 'MERCHANT'
               ? 'Merchant Wins — Dispute Denied'
-              : liveDecision.verdict === 'CARDHOLDER'
+              : active.verdict === 'CARDHOLDER'
               ? 'Cardholder Wins — Refund Granted'
               : 'Insufficient Evidence — Case Escalated'
             : scenario.decision.outcome
 
-          const confidenceLabel = liveDecision
-            ? `${(liveDecision.confidence_score * 100).toFixed(1)}%`
+          const confidenceLabel = active
+            ? `${(active.confidence_score * 100).toFixed(1)}%`
             : scenario.decision.confidence
 
-          const summaryText = liveDecision
-            ? liveDecision.executive_summary
+          const summaryText = active
+            ? active.executive_summary
             : scenario.decision.summary
 
-          const primaryReason = liveDecision
-            ? liveDecision.primary_reason
+          const primaryReason = active
+            ? active.primary_reason
             : scenario.decision.primaryReason || scenario.decision.summary
 
-          const policyBasis = liveDecision
-            ? liveDecision.policy_basis
+          const policyBasis = active
+            ? active.policy_basis
             : scenario.decision.policyBasis || 'Card Scheme Dispute Regulations'
 
-          const factors = liveDecision
-            ? liveDecision.reasoning_statements.slice(0, 3).map((r) => r.statement)
+          const factors = active && active.reasoning_statements?.length
+            ? active.reasoning_statements.slice(0, 3).map((r) => r.statement)
             : scenario.decision.factors
 
-          const signals = liveDecision
-            ? liveDecision.reasoning_statements.map((r) => `[${r.source_tier.replace('TIER_', 'Tier ').replace('_', ' ')} · ${r.supports.toUpperCase()} · weight ${r.weight.toFixed(3)}] ${r.statement}`)
+          const signals = active && active.reasoning_statements?.length
+            ? active.reasoning_statements.map((r) => `[${r.source_tier.replace('TIER_', 'Tier ').replace('_', ' ')} · ${r.supports.toUpperCase()} · weight ${r.weight.toFixed(3)}] ${r.statement}`)
             : scenario.reasoning.signals
 
-          const counterargs = liveDecision?.counterarguments_addressed ?? []
-          const dm = liveDecision?.deterministic_metrics ?? null
-          const isLive = !!liveDecision
+          const counterargs = active?.counterarguments_addressed ?? []
+          const dm = active?.deterministic_metrics ?? null
 
           return (
           <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm" style={{ animation: 'fadeSlideIn 0.5s ease-out' }}>
@@ -683,10 +730,10 @@ export function DisputePlayground({
             {isLive && (
               <div className="mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-[11px] font-semibold text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
                 <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                Live Backend Decision — Pipeline: {liveDecision!.pipeline}
-                {liveDecision!.execution_time_seconds && (
+                Live Backend Decision — Pipeline: {active!.pipeline}
+                {active!.execution_time_seconds && (
                   <span className="ml-auto font-normal text-emerald-700 dark:text-emerald-400">
-                    Executed in {liveDecision!.execution_time_seconds.toFixed(2)}s
+                    Executed in {active!.execution_time_seconds.toFixed(2)}s
                   </span>
                 )}
               </div>
@@ -707,7 +754,7 @@ export function DisputePlayground({
                   </span>
                   {isLive && (
                     <span className="rounded-md bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
-                      {liveDecision!.confidence_band.replace(/_/g, ' ')}
+                      {active!.confidence_band.replace(/_/g, ' ')}
                     </span>
                   )}
                 </div>
@@ -716,14 +763,14 @@ export function DisputePlayground({
               </div>
 
               <div className={`flex items-center gap-3 rounded-2xl border px-5 py-3 ${
-                isLive && liveDecision!.confidence_score >= 0.75
+                isLive && active!.confidence_score >= 0.75
                   ? 'border-emerald-200 bg-emerald-50/80 dark:border-emerald-900/40 dark:bg-emerald-950/40'
-                  : isLive && liveDecision!.confidence_score < 0.6
+                  : isLive && active!.confidence_score < 0.6
                   ? 'border-amber-200 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/40'
                   : 'border-emerald-200 bg-emerald-50/80 dark:border-emerald-900/40 dark:bg-emerald-950/40'
               }`}>
                 <Sparkles className={`size-5 ${
-                  isLive && liveDecision!.confidence_score < 0.6
+                  isLive && active!.confidence_score < 0.6
                     ? 'text-amber-600 dark:text-amber-400'
                     : 'text-emerald-600 dark:text-emerald-400'
                 }`} />
@@ -806,9 +853,9 @@ export function DisputePlayground({
                 {isLive ? (
                   <div className="flex flex-col gap-3">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
-                      Reasoning Statements ({liveDecision!.reasoning_statements.length} evidence points evaluated)
+                      Reasoning Statements ({active!.reasoning_statements.length} evidence points evaluated)
                     </p>
-                    {liveDecision!.reasoning_statements.map((r, i) => (
+                    {active!.reasoning_statements.map((r, i) => (
                       <div key={i} className="flex items-start gap-3 rounded-lg border border-border/50 bg-card p-3">
                         <span className={`mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase ${
                           r.supports === 'merchant' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
