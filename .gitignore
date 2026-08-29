@@ -8,3 +8,8 @@ bloom-export(1).zip
 
 
 output/
+
+__pycache__/
+*.pyc
+.vscode/
+*.tsbuildinfo

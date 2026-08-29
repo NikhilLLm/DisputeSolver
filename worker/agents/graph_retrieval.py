@@ -196,16 +196,3 @@ def query_similar_facts(
     return results
 
 
-if __name__ == "__main__":
-    import json
-    case = "DSP-2026-00201"
-    ctx = fetch_case_reasoning_context(case)
-    print(f"--- Bounded Context for {case} ---")
-    print(f"Dispute Reason: {ctx['dispute_reason']}")
-    print(f"Parties ({len(ctx['parties'])}): {[p['name'] for p in ctx['parties']]}")
-    print(f"Entities ({len(ctx['entities'])}): {[e['entity_id'] for e in ctx['entities']]}")
-    print(f"Domain Bridges ({len(ctx['domain_bridges'])}): {ctx['domain_bridges']}")
-    print(f"Evidence Envelopes ({len(ctx['evidence'])}): {len(ctx['evidence'])}")
-    print(f"Assertions ({len(ctx['assertions'])}): {len(ctx['assertions'])}")
-    print(f"Facts ({len(ctx['facts'])}): {len(ctx['facts'])}")
-    print(f"Policy Clauses ({len(ctx['policy_clauses'])}): {len(ctx['policy_clauses'])}")

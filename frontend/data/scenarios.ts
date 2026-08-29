@@ -25,6 +25,7 @@ export type Scenario = {
   merchantResponse: string
   merchantPrompt: string
   customerEvidence: Evidence[]
+  merchantEvidence: Evidence[]
   resolutionTime: {
     cycleDays: number
     industryBaselineDays: number
@@ -88,6 +89,13 @@ export const scenarios: Scenario[] = [
       ev('m2', 'merchant_delivery_photo.png', 'PNG', 'Carrier photo of package at front porch', 'TIER_1_TELEMETRY'),
       ev('m3', 'merchant_terms_of_service.pdf', 'PDF', 'Terms of Service Section 4.2 fulfillment clause', 'TIER_2_COMMUNICATION'),
     ],
+    resolutionTime: {
+      cycleDays: 4,
+      industryBaselineDays: 45,
+      timeSavedDays: 41,
+      reductionPct: '91%',
+      aiLatencySeconds: 12,
+    },
     decision: {
       outcome: 'Merchant Defense Upheld (Proof of Delivery)',
       confidence: '89%',
@@ -156,6 +164,13 @@ export const scenarios: Scenario[] = [
       ev('m2', 'merchant_quality_check_log.pdf', 'PDF', 'Quality inspection packing log for SKU-HP-BLK-01', 'TIER_1_TELEMETRY'),
       ev('m3', 'merchant_return_policy.pdf', 'PDF', 'Standard 30-day merchant return policy', 'TIER_2_COMMUNICATION'),
     ],
+    resolutionTime: {
+      cycleDays: 5,
+      industryBaselineDays: 45,
+      timeSavedDays: 40,
+      reductionPct: '89%',
+      aiLatencySeconds: 15,
+    },
     decision: {
       outcome: 'Cardholder Refund Recommended (Material Discrepancy)',
       confidence: '91%',
@@ -223,6 +238,13 @@ export const scenarios: Scenario[] = [
       ev('m2', 'merchant_fraud_risk_score.pdf', 'PDF', 'Fraud engine risk score (Low Risk / 3DS Verified)', 'TIER_1_TELEMETRY'),
       ev('m3', 'merchant_device_fingerprint.pdf', 'PDF', 'Device fingerprint and IP geolocation log', 'TIER_1_TELEMETRY'),
     ],
+    resolutionTime: {
+      cycleDays: 3,
+      industryBaselineDays: 45,
+      timeSavedDays: 42,
+      reductionPct: '93%',
+      aiLatencySeconds: 8,
+    },
     decision: {
       outcome: 'Merchant Defense Upheld (3DS Liability Shift)',
       confidence: '93%',
@@ -288,6 +310,13 @@ export const scenarios: Scenario[] = [
       ev('m1', 'merchant_transaction_comparison.pdf', 'PDF', 'Comparison showing ORD-554433221 and ORD-554433222', 'TIER_1_TELEMETRY'),
       ev('m2', 'merchant_session_logs.pdf', 'PDF', 'Distinct browser session IDs (09:00 vs 09:45)', 'TIER_1_TELEMETRY'),
     ],
+    resolutionTime: {
+      cycleDays: 2,
+      industryBaselineDays: 30,
+      timeSavedDays: 28,
+      reductionPct: '93%',
+      aiLatencySeconds: 5,
+    },
     decision: {
       outcome: 'Merchant Defense Upheld (Two Distinct Orders)',
       confidence: '95%',
@@ -354,6 +383,13 @@ export const scenarios: Scenario[] = [
       ev('m1', 'merchant_refund_confirmation.pdf', 'PDF', 'Merchant internal refund confirmation receipt', 'TIER_2_COMMUNICATION'),
       ev('m2', 'merchant_processor_log.pdf', 'PDF', 'Payment gateway processor log showing credit issued Jul 25', 'TIER_1_TELEMETRY'),
     ],
+    resolutionTime: {
+      cycleDays: 3,
+      industryBaselineDays: 45,
+      timeSavedDays: 42,
+      reductionPct: '93%',
+      aiLatencySeconds: 10,
+    },
     decision: {
       outcome: 'Dispute Resolved — Merchant Refund Confirmed',
       confidence: '96%',
@@ -417,6 +453,13 @@ export const scenarios: Scenario[] = [
       ev('m1', 'merchant_subscription_terms.pdf', 'PDF', 'Subscription Terms Section 5 (Post-cancellation usage)', 'TIER_2_COMMUNICATION'),
       ev('m2', 'merchant_usage_logs.pdf', 'PDF', 'Active video streaming sessions logged Aug 2 & Aug 3', 'TIER_1_TELEMETRY'),
     ],
+    resolutionTime: {
+      cycleDays: 5,
+      industryBaselineDays: 45,
+      timeSavedDays: 40,
+      reductionPct: '89%',
+      aiLatencySeconds: 14,
+    },
     decision: {
       outcome: 'Contested — Post-Cancellation Usage Conflict',
       confidence: '79%',
@@ -482,6 +525,13 @@ export const scenarios: Scenario[] = [
       ev('m1', 'merchant_pricing_breakdown.pdf', 'PDF', 'Weekend Chef\'s Table pricing schedule with $30 fee', 'TIER_2_COMMUNICATION'),
       ev('m2', 'merchant_pos_system_log.pdf', 'PDF', 'POS system terminal log recording $85.00 settlement', 'TIER_1_TELEMETRY'),
     ],
+    resolutionTime: {
+      cycleDays: 3,
+      industryBaselineDays: 30,
+      timeSavedDays: 27,
+      reductionPct: '90%',
+      aiLatencySeconds: 7,
+    },
     decision: {
       outcome: 'Partial Refund of $30 Discrepancy Recommended',
       confidence: '92%',
@@ -546,6 +596,13 @@ export const scenarios: Scenario[] = [
     merchantEvidence: [
       ev('m1', 'merchant_internal_order_status.pdf', 'PDF', 'Internal software status marked as \'Dispatched\'', 'TIER_3_ASSERTION'),
     ],
+    resolutionTime: {
+      cycleDays: 2,
+      industryBaselineDays: 45,
+      timeSavedDays: 43,
+      reductionPct: '96%',
+      aiLatencySeconds: 4,
+    },
     decision: {
       outcome: 'Cardholder Refund Recommended (Insufficient Merchant Proof)',
       confidence: '95%',

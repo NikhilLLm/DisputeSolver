@@ -2338,3 +2338,11 @@ Generic-noun entities (e.g. "refund", "subscription")	2/7 (cat 4, 5)	Worth fixin
 Cross-document fact linkage missing on the case's decisive fact	7/7, different fact each time (delivery ambiguity, complaint gap, item-per-order, usage-after-cancel, item-name mismatch, weekend-fee date check)	This is the most important finding across the whole set — every single case has its actual outcome-determining comparison sitting unconnected across two+ documents
 
 The last row is the real headline: it's not that any one category is missing a feature — it's that the specific fact each dispute actually turns on is, every single time, the one thing your extraction fails to connect. That's not coincidence; it's a structural gap in how entities get identified and merged across documents, and it'll keep recurring on every new case you generate until the canonicalization/entity-resolution layer is fixed generically — which is exactly the pipeline-first priority you already decided on two turns ago, now backed by seven-for-seven evidence.
+
+
+
+
+
+
+
+

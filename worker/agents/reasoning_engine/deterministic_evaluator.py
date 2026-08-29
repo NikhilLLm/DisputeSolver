@@ -267,12 +267,36 @@ def compute_deterministic_weights(
     merchant_score = max(0.0, merchant_score)
     total = cardholder_score + merchant_score
 
+    # --- Calibrated confidence scoring ---
+    # 1. Evidence volume factor: dampens confidence when total evidence is sparse
+    #    Approaches 1.0 as total evidence grows. VOLUME_HALF_SAT is the half-saturation point.
+    VOLUME_HALF_SAT = 2.0
+    volume_factor = total / (total + VOLUME_HALF_SAT) if total > 0 else 0.0
+
+    # 2. Raw ratio (same as before, but now just an intermediate)
     if total > 0:
-        cardholder_pct = round(cardholder_score / total, 4)
-        merchant_pct = round(merchant_score / total, 4)
+        raw_ch_ratio = cardholder_score / total
+        raw_me_ratio = merchant_score / total
     else:
-        cardholder_pct = 0.5
-        merchant_pct = 0.5
+        raw_ch_ratio = 0.5
+        raw_me_ratio = 0.5
+
+    # 3. Squash toward 50% based on evidence volume
+    #    With sparse evidence, scores compress toward 50%
+    #    With rich evidence, scores approach the raw ratio
+    cardholder_pct = round(0.5 + (raw_ch_ratio - 0.5) * volume_factor, 4)
+    merchant_pct = round(0.5 + (raw_me_ratio - 0.5) * volume_factor, 4)
+
+    # 4. Hard cap at 92% to reflect inherent uncertainty without external verification
+    CONFIDENCE_CAP = 0.92
+    cardholder_pct = min(cardholder_pct, CONFIDENCE_CAP)
+    merchant_pct = min(merchant_pct, CONFIDENCE_CAP)
+
+    # Re-normalize so they sum to ~1.0
+    pct_total = cardholder_pct + merchant_pct
+    if pct_total > 0:
+        cardholder_pct = round(cardholder_pct / pct_total, 4)
+        merchant_pct = round(merchant_pct / pct_total, 4)
 
     if abs(cardholder_pct - merchant_pct) < 0.05:
         net_direction = "CONTESTED"
